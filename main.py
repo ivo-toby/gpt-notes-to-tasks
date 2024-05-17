@@ -7,7 +7,8 @@ import argparse
 from openai import OpenAI
 
 # Retrieve OpenAI API key from environment variable
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 
 # Load configuration from YAML file
 def load_config(config_file):
@@ -67,8 +68,6 @@ def summarize_notes_and_identify_tasks(notes):
 
 # Function to add tasks to Apple Reminders
 def add_to_reminders(task):
-    tomorrow = datetime.now() + timedelta(days=1)
-    reminder_time = tomorrow.replace(hour=9, minute=0, second=0, microsecond=0)
     script = f"""
     tell application "Reminders"
         set myRemind to (current date) + 1 * days
