@@ -28,3 +28,24 @@ Run the script using the following command:
 python main.py --config config.yaml
 
 ```
+
+## Cron
+
+You can set up a cron job to run this script at the end of each day. Here’s how to add a cron job on a Unix-based system:
+
+```bash
+crontab -e
+```
+
+Add this line to the file:
+
+```bash
+0 18 * * * /usr/bin/python3 /path/to/the/script.py
+```
+
+This cron job will run the script daily at 6 PM.
+
+## Future Improvements
+
+- Add mail functionality to send the summary and action items to an email address.
+- Add weekly summary functionality.
