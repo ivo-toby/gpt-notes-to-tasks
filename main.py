@@ -3,9 +3,7 @@ import os
 import applescript
 import re
 from openai import OpenAI
-
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-
 # Retrieve OpenAI API key from environment variable
 
 # Function to load notes from the Markdown file
@@ -24,7 +22,7 @@ def extract_today_notes(notes):
 
 # Function to summarize notes and identify action items using GPT-4o
 def summarize_notes_and_identify_tasks(notes):
-    response = client.chat.completions.create(model="gpt-4",
+    response = client.chat.completions.create(model="gpt-4o",
     messages=[
         {"role": "system", "content": "You are a helpful assistant."},
         {
@@ -96,13 +94,18 @@ def main():
         print(f"- {task}")
         add_to_reminders(task)
 
+    # Prepare the folder structure
+    now = datetime.now()
+    year = now.strftime("%Y")
+    month = now.strftime("%m")
+    week_number = now.strftime("%U")
+    date_str = now.strftime("%Y-%m-%d")
+    output_dir = os.path.expanduser(f"~/Documents/cf-notes/daily/{year}/{month}/{week_number}")
+    os.makedirs(output_dir, exist_ok=True)
+    output_file = os.path.join(output_dir, f"{date_str}.md")
+
     # Write summary, tasks, and tags to a Markdown file
-    date_str = datetime.now().strftime("%Y-%m-%d")
-    output_file = os.path.expanduser(f"~/Documents/cf-notes/jrnl/{date_str}.md")
     write_summary_to_file(summary, tasks, tags, output_file)
 
 if __name__ == "__main__":
     main()
-
-
-
