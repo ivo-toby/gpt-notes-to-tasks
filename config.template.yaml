@@ -1,0 +1,7 @@
+daily_notes_file: "~/Documents/notes/jrnl/daily.md"
+daily_output_dir: "~/Documents/notes/daily"
+weekly_output_dir: "~/Documents/notes/Weekly"
+meeting_notes_output_dir: "~/Documents/notes/meetingnotes"
+base_url: "https://api.openai.com/v1/"
+api_key: ""
+model": "gpt-4o"
