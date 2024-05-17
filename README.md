@@ -2,6 +2,11 @@
 
 This is a Python script that processes daily notes, summarizes them, identifies action items, and adds them to Apple Reminders. It also writes a summary and action items to a Markdown file.
 
+## Why this script
+
+I use jrnl (https://jrnl.sh/) to write daily notes during my work day, it's easy and entirely terminal based, which allows for quickly jotting down ideas, notes, quotes and report meetings.
+This script allows me to summarize my day, identify action items and add them to my reminders, so I can keep track of what I need to do.
+
 ## Prerequisites
 
 - Python 3.x
