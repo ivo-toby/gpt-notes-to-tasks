@@ -1,10 +1,18 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import applescript
 import re
+import yaml
+import argparse
 from openai import OpenAI
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
 # Retrieve OpenAI API key from environment variable
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+# Load configuration from YAML file
+def load_config(config_file):
+    with open(config_file, "r") as file:
+        return yaml.safe_load(file)
 
 # Function to load notes from the Markdown file
 def load_notes(filename):
@@ -51,9 +59,13 @@ def summarize_notes_and_identify_tasks(notes):
 
 # Function to add tasks to Apple Reminders
 def add_to_reminders(task):
+    tomorrow = datetime.now() + timedelta(days=1)
+    reminder_time = tomorrow.replace(hour=9, minute=0, second=0, microsecond=0)
     script = f"""
     tell application "Reminders"
-        make new reminder with properties {{name:"{task}"}}
+        set myRemind to (current date) + 1 * days
+        set the time of myRemind to 9 * hours
+        make new reminder with properties {{name:"{task}", due date:myRemind}}
     end tell
     """
     applescript.run(script)
@@ -69,8 +81,8 @@ def write_summary_to_file(summary, tasks, tags, filename):
             file.write(f"- {task}\n")
 
 # Main function to process the daily notes
-def main():
-    notes_file = os.path.expanduser("~/Documents/cf-notes/jrnl/daily.md")
+def main(config):
+    notes_file = os.path.expanduser(config['daily_notes_file'])
     notes = load_notes(notes_file)
 
     today_notes = extract_today_notes(notes)
@@ -100,7 +112,7 @@ def main():
     month = now.strftime("%m")
     week_number = now.strftime("%U")
     date_str = now.strftime("%Y-%m-%d")
-    output_dir = os.path.expanduser(f"~/Documents/cf-notes/daily/{year}/{month}/{week_number}")
+    output_dir = os.path.expanduser(f"{config['daily_output_dir']}/{year}/{month}/{week_number}")
     os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(output_dir, f"{date_str}.md")
 
@@ -108,4 +120,9 @@ def main():
     write_summary_to_file(summary, tasks, tags, output_file)
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Daily Note Summarizer')
+    parser.add_argument('--config', type=str, default='config.yaml', help='Path to configuration file')
+    args = parser.parse_args()
+
+    config = load_config(args.config)
+    main(config) 
