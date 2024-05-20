@@ -7,10 +7,8 @@ import argparse
 from openai import OpenAI
 
 # Retrieve OpenAI API key from environment variable
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-# Load configuration from YAML file
 def load_config(config_file):
     with open(config_file, "r") as file:
         return yaml.safe_load(file)
@@ -33,9 +31,9 @@ def extract_today_notes(notes):
 
 
 # Function to summarize notes and identify action items using GPT-4o
-def summarize_notes_and_identify_tasks(notes):
+def summarize_notes_and_identify_tasks(client, model, notes):
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model=model,
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {
@@ -91,6 +89,10 @@ def write_summary_to_file(summary, tasks, tags, filename):
 
 # Main function to process the daily notes
 def main(config):
+    client = OpenAI(
+        base_url=config["base_url"],
+        api_key=config["api_key"],
+    )
     notes_file = os.path.expanduser(config["daily_notes_file"])
     notes = load_notes(notes_file)
 
@@ -101,7 +103,7 @@ def main(config):
         return
 
     # Use GPT-4o to summarize notes and identify tasks
-    result = summarize_notes_and_identify_tasks(today_notes)
+    result = summarize_notes_and_identify_tasks(client, config["model"], today_notes)
     summary = result["summary"]
     tasks = result["tasks"]
     tags = result["tags"]
