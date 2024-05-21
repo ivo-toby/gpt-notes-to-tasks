@@ -34,11 +34,27 @@ def extract_today_notes(notes):
 def summarize_notes_and_identify_tasks(client, model, notes):
     response = client.chat.completions.create(
         model=model,
+        temperature=0.5,
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {
                 "role": "user",
-                "content": f"Summarize the following notes, list actionable items, and add relevant tags to the end of the summary, tags should be written snake-case style:\n{notes}",
+                "content": f"""Given the provided daily journal-items, please generate a concise easy-to-read daily journal that encapsulates all the knowledge, links and facts from the journal items. 
+Following the summary, enumerate any actionable items identified within the journal entries. 
+Conclude with a list of relevant tags, formatted in snake-case, that categorize the content or themes of the notes.
+
+Example:
+Notes: "[2024-05-21 02:38:09 PM] The team discussed the upcoming project launch, focusing on the marketing strategy, budget allocations, and the final review of the product design. Tasks were assigned to finalize the promotional materials and secure additional funding."
+
+Summary: "[2024-05-21 02:38:09 PM] The team meeting centered on preparations for the project launch, with discussions on marketing strategies, budgeting, and product design finalization."
+
+Actionable Items:
+1. Finalize promotional materials.
+2. Secure additional funding.
+
+Tags: project_launch, marketing_strategy, budget_allocation, product_design
+
+The notes:\n{notes}""",
             },
         ],
         functions=[
@@ -77,7 +93,7 @@ def add_to_reminders(task):
 
 
 # Function to write summary and tasks to a Markdown file
-def write_summary_to_file(summary, tasks, tags, filename):
+def write_summary_to_file(summary, tasks, tags, notes, filename):
     with open(filename, "w") as file:
         file.write("# Daily Summary\n\n")
         file.write(f"## Summary\n\n{summary}\n\n")
@@ -85,6 +101,8 @@ def write_summary_to_file(summary, tasks, tags, filename):
         file.write("## Action Items\n\n")
         for task in tasks:
             file.write(f"- {task}\n")
+        file.write("\n## Original Notes\n\n")
+        file.write(notes)
 
 
 # Main function to process the daily notes
@@ -130,7 +148,7 @@ def main(config):
     output_file = os.path.join(output_dir, f"{date_str}.md")
 
     # Write summary, tasks, and tags to a Markdown file
-    write_summary_to_file(summary, tasks, tags, output_file)
+    write_summary_to_file(summary, tasks, tags, today_notes, output_file)
 
 
 if __name__ == "__main__":
