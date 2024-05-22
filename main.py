@@ -32,21 +32,15 @@ def extract_today_notes(notes):
 
 # Function to summarize notes and identify action items using GPT-4o
 def summarize_notes_and_identify_tasks(client, model, notes):
-    response = client.chat.completions.create(
-        model=model,
-        temperature=0.5,
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {
-                "role": "user",
-                "content": f"""Given the provided daily journal-items, please generate a concise easy-to-read daily journal that encapsulates all the knowledge, links and facts from the journal items. 
+    prompt = f"""
+Given the provided journal-entries, please generate a easy-to-read daily journal in Markdown format, which captures all the knowledge, links and facts from the journal entries for future reference. 
 Following the summary, enumerate any actionable items identified within the journal entries. 
 Conclude with a list of relevant tags, formatted in snake-case, that categorize the content or themes of the notes.
 
 Example:
-Notes: "[2024-05-21 02:38:09 PM] The team discussed the upcoming project launch, focusing on the marketing strategy, budget allocations, and the final review of the product design. Tasks were assigned to finalize the promotional materials and secure additional funding."
+Journal entry: "[2024-05-21 02:38:09 PM] The team discussed the upcoming project launch, [focusing on the marketing strategy](http://www.link.com), budget allocations, and the final review of the product design. Tasks were assigned to finalize the promotional materials and secure additional funding."
 
-Summary: "[2024-05-21 02:38:09 PM] The team meeting centered on preparations for the project launch, with discussions on marketing strategies, budgeting, and product design finalization."
+Summary: "[02:38:09 PM] Discussed upcoming product launch, [marketing strategies](http://www.link.com), budgeting, and product design finalization."
 
 Actionable Items:
 1. Finalize promotional materials.
@@ -54,7 +48,18 @@ Actionable Items:
 
 Tags: project_launch, marketing_strategy, budget_allocation, product_design
 
-The notes:\n{notes}""",
+The journal entries:\n{notes}"""
+    response = client.chat.completions.create(
+        model=model,
+        temperature=1.0,
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a helpful assistant and a genius summarizer.",
+            },
+            {
+                "role": "user",
+                "content": prompt,
             },
         ],
         functions=[
