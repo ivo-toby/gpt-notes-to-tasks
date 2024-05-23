@@ -9,7 +9,7 @@ from services.openai_service import OpenAIService
 from services.reminder_service import ReminderService
 
 
-def process_daily_notes(config):
+def process_daily_notes(config, args):
     notes_service = NotesService(config["daily_notes_file"])
     openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
 
@@ -26,16 +26,17 @@ def process_daily_notes(config):
     tags = result["tags"]
 
     display_results(summary, tasks, tags)
-    add_tasks_to_reminders(tasks)
-    write_daily_summary(config, summary, tasks, tags, today_notes)
 
-    # Generate and save meeting notes
-    meeting_notes = openai_service.generate_meeting_notes(today_notes)
-    for meeting in meeting_notes:
-        save_meeting_notes(meeting)
+    if not args.dry_run:
+        if not args.skip_reminders:
+            add_tasks_to_reminders(tasks)
+
+        write_daily_summary(
+            config, summary, tasks, tags, today_notes, args.replace_summary
+        )
 
 
-def process_weekly_notes(config):
+def process_weekly_notes(config, args):
     notes_service = NotesService(config["daily_notes_file"])
     openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
 
@@ -52,9 +53,35 @@ def process_weekly_notes(config):
     accomplishments = openai_service.identify_accomplishments(weekly_notes)
     learnings = openai_service.identify_learnings(weekly_notes)
 
-    write_weekly_summary(
-        config, weekly_summary, accomplishments, learnings, weekly_notes
-    )
+    display_results(weekly_summary, accomplishments, learnings)
+
+    if not args.dry_run:
+        write_weekly_summary(
+            config,
+            weekly_summary,
+            accomplishments,
+            learnings,
+            weekly_notes,
+            args.replace_summary,
+        )
+
+
+def process_meeting_notes(config, args):
+    notes_service = NotesService(config["daily_notes_file"])
+    openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
+
+    notes = notes_service.load_notes()
+    today_notes = notes_service.extract_today_notes(notes)
+
+    if not today_notes:
+        print("No notes found for today.")
+        return
+
+    meeting_notes = openai_service.generate_meeting_notes(today_notes)
+
+    if not args.dry_run:
+        for meeting in meeting_notes:
+            save_meeting_notes(meeting)
 
 
 def display_results(summary, tasks, tags):
@@ -72,7 +99,7 @@ def add_tasks_to_reminders(tasks):
         ReminderService.add_to_reminders(task)
 
 
-def write_daily_summary(config, summary, tasks, tags, today_notes):
+def write_daily_summary(config, summary, tasks, tags, today_notes, replace_summary):
     # Prepare the folder structure
     now = datetime.now()
     year = now.strftime("%Y")
@@ -85,13 +112,22 @@ def write_daily_summary(config, summary, tasks, tags, today_notes):
     )
     output_file = os.path.join(output_dir, f"{date_str}.md")
 
-    # Write summary, tasks, tags, and original notes to a file
-    content = create_daily_summary_content(summary, tasks, tags, today_notes)
+    if replace_summary or not os.path.exists(output_file):
+        content = create_daily_summary_content(summary, tasks, tags, today_notes)
+    else:
+        # Append summary to existing file's content
+        with open(output_file, "r") as file:
+            existing_content = file.read()
+        additional_content = create_daily_summary_content(
+            summary, tasks, tags, today_notes
+        )
+        content = existing_content + "\n\n" + additional_content
+
     write_summary_to_file(output_file, content)
 
 
 def write_weekly_summary(
-    config, weekly_summary, accomplishments, learnings, weekly_notes
+    config, weekly_summary, accomplishments, learnings, weekly_notes, replace_summary
 ):
     # Prepare the output file path
     start_date, end_date = get_week_range()
@@ -103,10 +139,19 @@ def write_weekly_summary(
     )
     output_file = os.path.join(output_dir, f"week_{week_number}_summary.md")
 
-    # Write the weekly summary, accomplishments, and learnings to the file
-    content = create_weekly_summary_content(
-        weekly_summary, accomplishments, learnings, weekly_notes
-    )
+    if replace_summary or not os.path.exists(output_file):
+        content = create_weekly_summary_content(
+            weekly_summary, accomplishments, learnings, weekly_notes
+        )
+    else:
+        # Append weekly summary to existing file's content
+        with open(output_file, "r") as file:
+            existing_content = file.read()
+        additional_content = create_weekly_summary_content(
+            weekly_summary, accomplishments, learnings, weekly_notes
+        )
+        content = existing_content + "\n\n" + additional_content
+
     write_summary_to_file(output_file, content)
 
 
@@ -172,12 +217,32 @@ if __name__ == "__main__":
         "--config", type=str, default="config.yaml", help="Path to configuration file"
     )
     parser.add_argument("--weekly", action="store_true", help="Process weekly notes")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Do not write to files or create reminders",
+    )
+    parser.add_argument(
+        "--skip-reminders", action="store_true", help="Do not create reminders"
+    )
+    parser.add_argument(
+        "--replace-summary",
+        action="store_true",
+        help="Replace existing summary instead of appending",
+    )
+    parser.add_argument(
+        "--meetingnotes",
+        action="store_true",
+        help="Generate and save meeting notes",
+    )
     args = parser.parse_args()
 
     config = load_config(args.config)
 
-    if args.weekly:
-        process_weekly_notes(config)
+    if args.meetingnotes:
+        process_meeting_notes(config, args)
+    elif args.weekly:
+        process_weekly_notes(config, args)
     else:
-        process_daily_notes(config)
+        process_daily_notes(config, args)
 

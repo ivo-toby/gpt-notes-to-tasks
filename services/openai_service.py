@@ -1,13 +1,16 @@
-import openai
+from openai import OpenAI
+from utils.config_loader import load_config
 
 
 class OpenAIService:
     def __init__(self, api_key, model="gpt-4"):
-        openai.api_key = api_key
         self.model = model
+        self.client = OpenAI(
+            api_key=api_key,
+        )
 
     def chat_completion_with_function(self, messages, functions, function_call):
-        response = openai.ChatCompletion.create(
+        response = self.client.chat.completions.create(
             model=self.model,
             temperature=0.7,
             messages=messages,
@@ -61,7 +64,7 @@ Journal entries:\n{notes}"""
         response = self.chat_completion_with_function(
             messages, functions, function_call
         )
-        arguments = eval(response["function_call"]["arguments"])
+        arguments = eval(response.function_call.arguments)
 
         return {
             "summary": arguments["summary"],
@@ -142,7 +145,7 @@ Journal entries:\n{notes}"""
         response = self.chat_completion_with_function(
             messages, functions, function_call
         )
-        return eval(response["function_call"]["arguments"])
+        return eval(response.function_call.arguments)
 
     def generate_weekly_summary(self, notes):
         prompt = f"""
@@ -176,7 +179,7 @@ Weekly journal entries:\n{notes}"""
         response = self.chat_completion_with_function(
             messages, functions, function_call
         )
-        return response["function_call"]["arguments"]
+        return response.function_call.arguments
 
     def identify_accomplishments(self, notes):
         prompt = f"""
@@ -214,7 +217,7 @@ Weekly journal entries:\n{notes}"""
         response = self.chat_completion_with_function(
             messages, functions, function_call
         )
-        return eval(response["function_call"]["arguments"])
+        return eval(response.function_call.arguments)
 
     def identify_learnings(self, notes):
         prompt = f"""
@@ -251,4 +254,4 @@ Weekly journal entries:\n{notes}"""
         response = self.chat_completion_with_function(
             messages, functions, function_call
         )
-        return eval(response["function_call"]["arguments"])
+        return eval(response.function_call.arguments)
