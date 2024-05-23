@@ -1,136 +1,63 @@
-from datetime import datetime, timedelta
-import os
-import applescript
-import re
-import yaml
 import argparse
-from openai import OpenAI
-
-# Retrieve OpenAI API key from environment variable
-
-
-def load_config(config_file):
-    with open(config_file, "r") as file:
-        return yaml.safe_load(file)
-
-
-# Function to load notes from the Markdown file
-def load_notes(filename):
-    with open(filename, "r") as file:
-        return file.read()
+from datetime import datetime
+import os
+from utils.config_loader import load_config
+from utils.file_handler import create_output_dir, load_notes, write_summary_to_file
+from utils.date_utils import get_date_str, get_week_range
+from services.notes_service import NotesService
+from services.openai_service import OpenAIService
+from services.reminder_service import ReminderService
 
 
-# Function to extract notes for the current day
-def extract_today_notes(notes):
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    pattern = re.compile(
-        rf"\[{today_str}.*?\].*?(?=\[\d{{4}}-\d{{2}}-\d{{2}}|\Z)", re.DOTALL
-    )
-    today_notes = pattern.findall(notes)
-    return "\n".join(today_notes)
+def process_daily_notes(config):
+    notes_service = NotesService(config["daily_notes_file"])
+    openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
 
-
-# Function to summarize notes and identify action items using GPT-4o
-def summarize_notes_and_identify_tasks(client, model, notes):
-    prompt = f"""
-Given the provided journal-entries, please generate a easy-to-read daily journal in Markdown format, which captures all the knowledge, links and facts from the journal entries for future reference. 
-Following the summary, enumerate any actionable items identified within the journal entries. 
-Conclude with a list of relevant tags, formatted in snake-case, that categorize the content or themes of the notes.
-
-Example:
-Journal entry: "[2024-05-21 02:38:09 PM] The team discussed the upcoming project launch, [focusing on the marketing strategy](http://www.link.com), budget allocations, and the final review of the product design. Tasks were assigned to finalize the promotional materials and secure additional funding."
-
-Summary: "[02:38:09 PM] Discussed upcoming product launch, [marketing strategies](http://www.link.com), budgeting, and product design finalization."
-
-Actionable Items:
-1. Finalize promotional materials.
-2. Secure additional funding.
-
-Tags: project_launch, marketing_strategy, budget_allocation, product_design
-
-The journal entries:\n{notes}"""
-    response = client.chat.completions.create(
-        model=model,
-        temperature=1.0,
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a helpful assistant and a genius summarizer.",
-            },
-            {
-                "role": "user",
-                "content": prompt,
-            },
-        ],
-        functions=[
-            {
-                "name": "summarize_notes_and_tasks",
-                "description": "Summarize notes and list actionable items",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "summary": {"type": "string"},
-                        "tasks": {"type": "array", "items": {"type": "string"}},
-                        "tags": {"type": "array", "items": {"type": "string"}},
-                    },
-                    "required": ["summary", "tasks", "tags"],
-                },
-            }
-        ],
-        function_call={"name": "summarize_notes_and_tasks"},
-    )
-    arguments = response.choices[0].message.function_call.arguments
-    return eval(
-        arguments
-    )  # Converting string representation of dictionary to dictionary
-
-
-# Function to add tasks to Apple Reminders
-def add_to_reminders(task):
-    script = f"""
-    tell application "Reminders"
-        set myRemind to (current date) + 1 * days
-        set the time of myRemind to 9 * hours
-        make new reminder with properties {{name:"{task}", due date:myRemind}}
-    end tell
-    """
-    applescript.run(script)
-
-
-# Function to write summary and tasks to a Markdown file
-def write_summary_to_file(summary, tasks, tags, notes, filename):
-    with open(filename, "w") as file:
-        file.write("# Daily Summary\n\n")
-        file.write(f"## Summary\n\n{summary}\n\n")
-        file.write(f"### Tags\n\n{' '.join([f'#{tag}' for tag in tags])}\n\n")
-        file.write("## Action Items\n\n")
-        for task in tasks:
-            file.write(f"- {task}\n")
-        file.write("\n## Original Notes\n\n")
-        file.write(notes)
-
-
-# Main function to process the daily notes
-def main(config):
-    client = OpenAI(
-        base_url=config["base_url"],
-        api_key=config["api_key"],
-    )
-    notes_file = os.path.expanduser(config["daily_notes_file"])
-    notes = load_notes(notes_file)
-
-    today_notes = extract_today_notes(notes)
+    notes = notes_service.load_notes()
+    today_notes = notes_service.extract_today_notes(notes)
 
     if not today_notes:
         print("No notes found for today.")
         return
 
-    # Use GPT-4o to summarize notes and identify tasks
-    result = summarize_notes_and_identify_tasks(client, config["model"], today_notes)
+    result = openai_service.summarize_notes_and_identify_tasks(today_notes)
     summary = result["summary"]
     tasks = result["tasks"]
     tags = result["tags"]
 
+    display_results(summary, tasks, tags)
+    add_tasks_to_reminders(tasks)
+    write_daily_summary(config, summary, tasks, tags, today_notes)
+
+    # Generate and save meeting notes
+    meeting_notes = openai_service.generate_meeting_notes(today_notes)
+    for meeting in meeting_notes:
+        save_meeting_notes(meeting)
+
+
+def process_weekly_notes(config):
+    notes_service = NotesService(config["daily_notes_file"])
+    openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
+
+    notes = notes_service.load_notes()
+    start_date, end_date = get_week_range()
+
+    weekly_notes = notes_service.extract_weekly_notes(notes, start_date, end_date)
+
+    if not weekly_notes:
+        print("No notes found for the past week.")
+        return
+
+    weekly_summary = openai_service.generate_weekly_summary(weekly_notes)
+    accomplishments = openai_service.identify_accomplishments(weekly_notes)
+    learnings = openai_service.identify_learnings(weekly_notes)
+
+    write_weekly_summary(
+        config, weekly_summary, accomplishments, learnings, weekly_notes
+    )
+
+
+def display_results(summary, tasks, tags):
     print("Summary:")
     print(summary)
     print("Tags:")
@@ -138,30 +65,119 @@ def main(config):
     print("Action Items:")
     for task in tasks:
         print(f"- {task}")
-        add_to_reminders(task)
 
+
+def add_tasks_to_reminders(tasks):
+    for task in tasks:
+        ReminderService.add_to_reminders(task)
+
+
+def write_daily_summary(config, summary, tasks, tags, today_notes):
     # Prepare the folder structure
     now = datetime.now()
     year = now.strftime("%Y")
     month = now.strftime("%m")
     week_number = now.strftime("%U")
-    date_str = now.strftime("%Y-%m-%d")
-    output_dir = os.path.expanduser(
-        f"{config['daily_output_dir']}/{year}/{month}/{week_number}"
+    date_str = get_date_str()
+
+    output_dir = create_output_dir(
+        os.path.expanduser(f"{config['daily_output_dir']}/{year}/{month}/{week_number}")
     )
-    os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(output_dir, f"{date_str}.md")
 
-    # Write summary, tasks, and tags to a Markdown file
-    write_summary_to_file(summary, tasks, tags, today_notes, output_file)
+    # Write summary, tasks, tags, and original notes to a file
+    content = create_daily_summary_content(summary, tasks, tags, today_notes)
+    write_summary_to_file(output_file, content)
+
+
+def write_weekly_summary(
+    config, weekly_summary, accomplishments, learnings, weekly_notes
+):
+    # Prepare the output file path
+    start_date, end_date = get_week_range()
+    year = start_date.strftime("%Y")
+    week_number = start_date.strftime("%U")
+
+    output_dir = create_output_dir(
+        os.path.expanduser(f"{config['weekly_output_dir']}/{year}/{week_number}")
+    )
+    output_file = os.path.join(output_dir, f"week_{week_number}_summary.md")
+
+    # Write the weekly summary, accomplishments, and learnings to the file
+    content = create_weekly_summary_content(
+        weekly_summary, accomplishments, learnings, weekly_notes
+    )
+    write_summary_to_file(output_file, content)
+
+
+def create_daily_summary_content(summary, tasks, tags, today_notes):
+    return (
+        "# Daily Summary\n\n"
+        f"## Summary\n\n{summary}\n\n"
+        f"### Tags\n\n{' '.join([f'#{tag}' for tag in tags])}\n\n"
+        "## Action Items\n\n"
+        + "\n".join(f"- {task}" for task in tasks)
+        + "\n\n## Original Notes\n\n"
+        f"{today_notes}"
+    )
+
+
+def create_weekly_summary_content(
+    weekly_summary, accomplishments, learnings, weekly_notes
+):
+    return (
+        "# Weekly Summary\n\n"
+        f"## Summary\n\n{weekly_summary}\n\n"
+        "## Accomplishments\n\n"
+        + "\n".join(f"- {accomplishment}" for accomplishment in accomplishments)
+        + "\n\n## Notable Learnings\n\n"
+        + "\n".join(f"- {learning}" for learning in learnings)
+        + "\n\n## Original Notes\n\n"
+        f"{weekly_notes}"
+    )
+
+
+def save_meeting_notes(meeting_data, output_dir="MeetingNotes"):
+    date_str = meeting_data.get("date", datetime.now().strftime("%Y-%m-%d"))
+    subject = meeting_data.get("meeting_subject", "meeting").replace(" ", "_").lower()
+    file_name = f"{date_str}_{subject}.md"
+
+    meeting_notes_content = (
+        f"# {date_str} Meeting Notes - {meeting_data.get('meeting_subject')}\n\n"
+        f"## Tags\n\n{meeting_data.get('tags')}\n\n"
+        "## Participants\n\n"
+        + "\n".join(
+            f"- {participant}" for participant in meeting_data.get("participants")
+        )
+        + "\n\n"
+        f"## Meeting notes\n\n{meeting_data.get('meeting_notes')}\n\n"
+        "## Decisions\n\n" + f"{meeting_data.get('decisions', '')}\n\n"
+        "## Action items\n\n"
+        + "\n".join(
+            f"- {action_item}" for action_item in meeting_data.get("action_items", [])
+        )
+        + "\n\n"
+        f"## References\n\n{meeting_data.get('references')}\n"
+    )
+
+    os.makedirs(output_dir, exist_ok=True)
+    file_path = os.path.join(output_dir, file_name)
+    with open(file_path, "w") as file:
+        file.write(meeting_notes_content)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Daily Note Summarizer")
+    parser = argparse.ArgumentParser(description="Note Summarizer")
     parser.add_argument(
         "--config", type=str, default="config.yaml", help="Path to configuration file"
     )
+    parser.add_argument("--weekly", action="store_true", help="Process weekly notes")
     args = parser.parse_args()
 
     config = load_config(args.config)
-    main(config)
+
+    if args.weekly:
+        process_weekly_notes(config)
+    else:
+        process_daily_notes(config)
+
