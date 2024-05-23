@@ -78,10 +78,9 @@ def process_meeting_notes(config, args):
         return
 
     meeting_notes = openai_service.generate_meeting_notes(today_notes)
-
     if not args.dry_run:
-        for meeting in meeting_notes:
-            save_meeting_notes(meeting)
+        for meeting in meeting_notes["meetings"]:
+            save_meeting_notes(meeting, config["meeting_notes_output_dir"])
 
 
 def display_results(summary, tasks, tags):
@@ -204,10 +203,11 @@ def save_meeting_notes(meeting_data, output_dir="MeetingNotes"):
         + "\n\n"
         f"## References\n\n{meeting_data.get('references')}\n"
     )
+    output_dir = create_output_dir(os.path.expanduser(f"{output_dir}"))
+    output_file = os.path.join(output_dir, f"{file_name}.md")
 
     os.makedirs(output_dir, exist_ok=True)
-    file_path = os.path.join(output_dir, file_name)
-    with open(file_path, "w") as file:
+    with open(output_file, "w") as file:
         file.write(meeting_notes_content)
 
 

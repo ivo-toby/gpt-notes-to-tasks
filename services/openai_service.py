@@ -12,7 +12,7 @@ class OpenAIService:
     def chat_completion_with_function(self, messages, functions, function_call):
         response = self.client.chat.completions.create(
             model=self.model,
-            temperature=0.7,
+            temperature=1.0,
             messages=messages,
             functions=functions,
             function_call=function_call,
@@ -74,7 +74,7 @@ Journal entries:\n{notes}"""
 
     def generate_meeting_notes(self, notes):
         prompt = f"""
-From the following journal entries, identify and extract details to create meeting notes in Markdown format based on this template:
+From the following journal entries, infer which entries may have been taken during a meeting or call. For each meeting or call, extract details to create meeting notes in Markdown format based on this template:
 # {{date}} Meeting Notes - {{meeting_subject}}
 ## Tags
 {{tags}}
@@ -89,6 +89,7 @@ From the following journal entries, identify and extract details to create meeti
 
 Example:
 Journal entry: "[2024-05-22 01:00:00 PM] Meeting on Project X. Participants: Alice, Bob. Discussed project timelines, potential risks, and mitigation strategies. Decisions made to accelerate phase 1 and review phase 2 next week. Action items: Alice to draft phase 1 report, Bob to set up a client meeting. Reference: [Project docs](http://www.link.com)."
+Journal entry: "[2024-05-22 04:00:00 PM] Call on Project Y. Participants: John. Discussed project budget, marketing strategies. Decisions made to accelerate phase 1 and review phase 2 next week. Action items: Alice to draft phase 1 report, Bob to set up a client meeting. Reference: [Project docs](http://www.link.com)."
 
 # 2024-05-22 Meeting Notes - Project X
 ## Tags
@@ -106,7 +107,23 @@ Accelerate phase 1 and review phase 2 next week.
 ## References
 [Project docs](http://www.link.com)
 
+# 2024-05-22 Meeting Notes - Project Y
+## Tags
+project_y, marketing, budget
+## Participants
+- John
+## Meeting notes
+Discussed project budget, marketing strategies.
+## Decisions
+Accelerate phase 1 and review phase 2 next week.
+## Action items
+- Alice to draft phase 1 report.
+- Bob to set up a client meeting.
+## References
+[Project docs](http://www.link.com)
+
 Journal entries:\n{notes}"""
+
         messages = [
             {
                 "role": "system",
@@ -121,22 +138,37 @@ Journal entries:\n{notes}"""
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "date": {"type": "string"},
-                        "meeting_subject": {"type": "string"},
-                        "tags": {"type": "string"},
-                        "participants": {"type": "array", "items": {"type": "string"}},
-                        "meeting_notes": {"type": "string"},
-                        "decisions": {"type": "string"},
-                        "action_items": {"type": "array", "items": {"type": "string"}},
-                        "references": {"type": "string"},
+                        "meetings": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "date": {"type": "string"},
+                                    "meeting_subject": {"type": "string"},
+                                    "tags": {"type": "string"},
+                                    "participants": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                    },
+                                    "meeting_notes": {"type": "string"},
+                                    "decisions": {"type": "string"},
+                                    "action_items": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                    },
+                                    "references": {"type": "string"},
+                                },
+                                "required": [
+                                    "date",
+                                    "meeting_subject",
+                                    "tags",
+                                    "participants",
+                                    "meeting_notes",
+                                ],
+                            },
+                        }
                     },
-                    "required": [
-                        "date",
-                        "meeting_subject",
-                        "tags",
-                        "participants",
-                        "meeting_notes",
-                    ],
+                    "required": ["meetings"],
                 },
             }
         ]
@@ -145,7 +177,11 @@ Journal entries:\n{notes}"""
         response = self.chat_completion_with_function(
             messages, functions, function_call
         )
-        return eval(response.function_call.arguments)
+
+        # Extract the arguments from the response function call
+        meeting_notes_list = eval(response.function_call.arguments)
+
+        return meeting_notes_list
 
     def generate_weekly_summary(self, notes):
         prompt = f"""
