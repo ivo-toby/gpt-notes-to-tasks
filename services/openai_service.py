@@ -185,17 +185,17 @@ Journal entries:\n{notes}"""
 
     def generate_weekly_summary(self, notes):
         prompt = f"""
-From the following week's journal entries, generate a weekly summary in Markdown format. The summary should capture key points, any important discussions, and major events.
+        From the following week's journal entries, generate a weekly summary in Markdown format. The summary should capture key points, any important discussions, and major events.
 
-Example:
-Journal entry: "[2024-05-20] Started phase 1 of Project Y. [2024-05-21] Team discussed marketing strategies for Product Z. [2024-05-22] Meeting on Project X."
+        Example:
+        Journal entry: "[2024-05-20] Started phase 1 of Project Y. [2024-05-21] Team discussed marketing strategies for Product Z. [2024-05-22] Meeting on Project X."
 
-Summary:
-- Started phase 1 of Project Y.
-- Discussed marketing strategies for Product Z.
-- Held a meeting on Project X.
+        Summary:
+        - Started phase 1 of Project Y.
+        - Discussed marketing strategies for Product Z.
+        - Held a meeting on Project X.
 
-Weekly journal entries:\n{notes}"""
+        Weekly journal entries:\n{notes}"""
         messages = [
             {
                 "role": "system",
@@ -203,19 +203,12 @@ Weekly journal entries:\n{notes}"""
             },
             {"role": "user", "content": prompt},
         ]
-        functions = [
-            {
-                "name": "generate_weekly_summary",
-                "description": "Create a summary of the week's journal entries",
-                "parameters": {"type": "string"},
-            }
-        ]
-        function_call = {"name": "generate_weekly_summary"}
 
-        response = self.chat_completion_with_function(
-            messages, functions, function_call
+        response = self.client.chat.completions.create(
+            model=self.model, messages=messages, max_tokens=1000
         )
-        return response.function_call.arguments
+
+        return response.choices[0].message["content"]
 
     def identify_accomplishments(self, notes):
         prompt = f"""
