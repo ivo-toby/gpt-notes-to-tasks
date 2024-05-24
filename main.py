@@ -49,17 +49,13 @@ def process_weekly_notes(config, args):
         return
 
     weekly_summary = openai_service.generate_weekly_summary(weekly_notes)
-    accomplishments = openai_service.identify_accomplishments(weekly_notes)
-    learnings = openai_service.identify_learnings(weekly_notes)
 
-    display_results(weekly_summary, accomplishments, learnings)
+    display_results(weekly_summary, "", "")
 
     if not args.dry_run:
         write_weekly_summary(
             config,
             weekly_summary,
-            accomplishments,
-            learnings,
             weekly_notes,
             args.replace_summary,
         )
@@ -124,9 +120,7 @@ def write_daily_summary(config, summary, tasks, tags, today_notes, replace_summa
     write_summary_to_file(output_file, content)
 
 
-def write_weekly_summary(
-    config, weekly_summary, accomplishments, learnings, weekly_notes, replace_summary
-):
+def write_weekly_summary(config, weekly_summary, weekly_notes, replace_summary):
     # Prepare the output file path
     start_date, end_date = get_week_range()
     year = start_date.strftime("%Y")
@@ -138,16 +132,12 @@ def write_weekly_summary(
     output_file = os.path.join(output_dir, f"week_{week_number}_summary.md")
 
     if replace_summary or not os.path.exists(output_file):
-        content = create_weekly_summary_content(
-            weekly_summary, accomplishments, learnings, weekly_notes
-        )
+        content = create_weekly_summary_content(weekly_summary, weekly_notes)
     else:
         # Append weekly summary to existing file's content
         with open(output_file, "r") as file:
             existing_content = file.read()
-        additional_content = create_weekly_summary_content(
-            weekly_summary, accomplishments, learnings, weekly_notes
-        )
+        additional_content = create_weekly_summary_content(weekly_summary, weekly_notes)
         content = existing_content + "\n\n" + additional_content
 
     write_summary_to_file(output_file, content)
@@ -165,17 +155,10 @@ def create_daily_summary_content(summary, tasks, tags, today_notes):
     )
 
 
-def create_weekly_summary_content(
-    weekly_summary, accomplishments, learnings, weekly_notes
-):
+def create_weekly_summary_content(weekly_summary, weekly_notes):
     return (
         "# Weekly Summary\n\n"
-        f"## Summary\n\n{weekly_summary}\n\n"
-        "## Accomplishments\n\n"
-        + "\n".join(f"- {accomplishment}" for accomplishment in accomplishments)
-        + "\n\n## Notable Learnings\n\n"
-        + "\n".join(f"- {learning}" for learning in learnings)
-        + "\n\n## Original Notes\n\n"
+        f"## Summary\n\n{weekly_summary}\n\n" + "\n\n## Original Notes\n\n"
         f"{weekly_notes}"
     )
 
