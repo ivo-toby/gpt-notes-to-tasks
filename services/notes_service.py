@@ -1,6 +1,6 @@
 from utils.date_utils import get_date_str
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 
 
@@ -21,8 +21,47 @@ class NotesService:
         today_notes = pattern.findall(notes)
         return "\n".join(today_notes)
 
-    def extract_weekly_notes(self, notes, start_date, end_date):
-        pattern = re.compile(rf"\[{start_date}.*?\].*?(?=\[{end_date}\]|\Z)", re.DOTALL)
+    def extract_weekly_notes(self, markdown, days=7):
+        """
+        Fetch notes from the last 'days' days from a markdown string.
+
+        Args:
+            markdown (str): Markdown string containing notes and timestamps
+            days (int): Number of days to look back from the current date
+
+        Returns:
+            list: List of notes from the last 'days' days
+        """
+        notes = []
+        pattern = r"\[(.*?)\] (.*?)(?=\[\d{4}-\d{2}-\d{2}|\Z)"
+        for match in re.finditer(pattern, markdown, re.DOTALL):
+            timestamp, note = match.groups()
+            notes.append((timestamp, note.strip()))
+
+        current_date = datetime.now()
+        start_date = current_date - timedelta(days=days)
+
+        recent_notes = [
+            f"{timestamp}: {note}"
+            for timestamp, note in notes
+            if datetime.strptime(timestamp, "%Y-%m-%d %I:%M:%S %p") > start_date
+        ]
+        return "\n".join(recent_notes)
+
+    def OLDextract_weekly_notes(self, notes, start_date, end_date):
+        # Convert the start and end dates to datetime objects
+        # Format dates to match the format in the notes
+        start_date_formatted = start_date.strftime("%Y-%m-%d")
+        end_date_formatted = end_date.strftime("%Y-%m-%d")
+
+        # Adjust the pattern to match the formatted date in notes
+        pattern = re.compile(
+            rf"\[{start_date_formatted}.*?\](.*?)(?=\[{end_date_formatted}.*?\]|\Z)",
+            re.DOTALL,
+        )
+        # Debugging print statement to check pattern
+        print(f"Regex pattern: {pattern}")
+
         weekly_notes = pattern.findall(notes)
         return "\n".join(weekly_notes)
 

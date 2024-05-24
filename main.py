@@ -42,9 +42,8 @@ def process_weekly_notes(config, args):
 
     notes = notes_service.load_notes()
     start_date, end_date = get_week_range()
-
-    weekly_notes = notes_service.extract_weekly_notes(notes, start_date, end_date)
-
+    weekly_notes = notes_service.extract_weekly_notes(notes)
+    print(weekly_notes)
     if not weekly_notes:
         print("No notes found for the past week.")
         return
@@ -245,4 +244,3 @@ if __name__ == "__main__":
         process_weekly_notes(config, args)
     else:
         process_daily_notes(config, args)
-
