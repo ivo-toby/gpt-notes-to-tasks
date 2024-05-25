@@ -127,8 +127,7 @@ The items extracted to action items will be added to Apple Reminders with a dead
 
 1. Clone the repository.
 2. Install the required Python packages: `pip install -r requirements.txt`.
-3. Set up your OpenAI API key as an environment variable: `export OPENAI_API_KEY=<your-api-key>`.
-4. Configure the script by editing the `config.yaml` file.
+3. Configure the script by editing the `config.yaml` file.
 
 ## Configuration
 
