@@ -11,7 +11,7 @@ class OpenAIService:
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
-                temperature=0.8,
+                temperature=0.6,
                 messages=messages,
                 functions=functions,
                 function_call=function_call,
