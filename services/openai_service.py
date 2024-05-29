@@ -24,7 +24,7 @@ class OpenAIService:
     def summarize_notes_and_identify_tasks(self, notes):
         prompt = f"""
         Given the provided journal entries, please generate an easy-to-read daily journal in Markdown format, which captures all the knowledge, links, and facts from the journal entries for future reference. 
-        Following the summary, enumerate any actionable items identified within the journal entries. 
+        Following the summary, enumerate any actionable items identified within the journal entries that are actionable by the owner of the notes. 
         Conclude with a list of relevant tags, formatted in snake-case, that categorize the content or themes of the notes.
         
         Example:
