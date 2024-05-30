@@ -14,7 +14,7 @@ def process_daily_notes(config, args):
     openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
 
     notes = notes_service.load_notes()
-    today_notes = notes_service.extract_today_notes(notes)
+    today_notes = notes_service.extract_today_notes(notes, args.date)
 
     if not today_notes:
         print("No notes found for today.")
@@ -65,7 +65,7 @@ def process_meeting_notes(config, args):
     openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
 
     notes = notes_service.load_notes()
-    today_notes = notes_service.extract_today_notes(notes)
+    today_notes = notes_service.extract_today_notes(notes, args.date)
 
     if not today_notes:
         print("No notes found for today.")
@@ -75,6 +75,9 @@ def process_meeting_notes(config, args):
     if not args.dry_run:
         for meeting in meeting_notes["meetings"]:
             save_meeting_notes(meeting, config["meeting_notes_output_dir"])
+    else:
+        for meeting in meeting_notes["meetings"]:
+            print(meeting)
 
 
 def display_results(summary, tasks, tags):
@@ -194,6 +197,7 @@ def save_meeting_notes(meeting_data, output_dir="MeetingNotes"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Note Summarizer")
+    parser.add_argument("--date", type=str, help="Date to fetch notes from")
     parser.add_argument(
         "--config", type=str, default="config.yaml", help="Path to configuration file"
     )

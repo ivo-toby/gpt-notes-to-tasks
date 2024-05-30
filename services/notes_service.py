@@ -13,8 +13,18 @@ class NotesService:
         with open(expanded_note_file, "r") as file:
             return file.read()
 
-    def extract_today_notes(self, notes):
-        today_str = get_date_str()
+    def extract_today_notes(self, notes, today_str=None):
+        # Step 1: Check if `today_str` is not `None`
+        if today_str is not None:
+            # Step 2: Validate `today_str` as a date string
+            try:
+                datetime.strptime(today_str, "%Y-%m-%d")
+            except ValueError:
+                print("Invalid date string. Using today's date instead.")
+                today_str = get_date_str()
+        else:
+            today_str = get_date_str()
+
         pattern = re.compile(
             rf"\[{today_str}.*?\].*?(?=\[\d{{4}}-\d{{2}}-\d{{2}}|\Z)", re.DOTALL
         )
@@ -47,23 +57,6 @@ class NotesService:
             if datetime.strptime(timestamp, "%Y-%m-%d %I:%M:%S %p") > start_date
         ]
         return "\n".join(recent_notes)
-
-    def OLDextract_weekly_notes(self, notes, start_date, end_date):
-        # Convert the start and end dates to datetime objects
-        # Format dates to match the format in the notes
-        start_date_formatted = start_date.strftime("%Y-%m-%d")
-        end_date_formatted = end_date.strftime("%Y-%m-%d")
-
-        # Adjust the pattern to match the formatted date in notes
-        pattern = re.compile(
-            rf"\[{start_date_formatted}.*?\](.*?)(?=\[{end_date_formatted}.*?\]|\Z)",
-            re.DOTALL,
-        )
-        # Debugging print statement to check pattern
-        print(f"Regex pattern: {pattern}")
-
-        weekly_notes = pattern.findall(notes)
-        return "\n".join(weekly_notes)
 
     def save_meeting_notes(meeting_data, output_dir="MeetingNotes"):
         date_str = meeting_data.get("date", datetime.now().strftime("%Y-%m-%d"))

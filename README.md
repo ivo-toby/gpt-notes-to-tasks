@@ -1,6 +1,6 @@
 # Daily Notes AI Summarization
 
-This Python script is a note summarizer that processes daily, weekly, and meeting notes. It uses the OpenAI API to summarize notes and identify tasks. The script accepts several command-line arguments to customize its behavior. 
+This Python script is a note summarizer that processes daily, weekly, and meeting notes. It uses the OpenAI API to summarize notes and identify tasks. The script accepts several command-line arguments to customize its behavior.
 
 ## What does it do?
 
@@ -8,12 +8,12 @@ Based on timestamped notes in a single file it can generate
 
 - A daily summary, including tags and actionable items
 - A weekly summary (including accomplishments and learnings)
-- Extract meeting notes 
+- Extract meeting notes
 - Extract action items and add them to the Apple Reminders App.
 
 _Please note_
 
-This script has been entirely created by CodeLLama and GPT-4o 
+This script has been entirely created by CodeLLama and GPT-4o
 
 ## Why this script
 
@@ -79,41 +79,44 @@ At the end of the day the file containing notes would look like this:
 
 [2024-05-19 12:15:30 PM] joined a webinar on the latest trends in AI and machine learning. Took notes for later review.
 ```
+
 If you'd use the script on this journal like this:
 
 `python main.py --skip-reminders --dry-run`
 
 This would be the generated output:
 
-----------------
+---
 
 ## Summary
 
-[08:45:32 AM] Reviewed sprint backlog and identified key tasks using Trello. 
+[08:45:32 AM] Reviewed sprint backlog and identified key tasks using Trello.
 
-[11:12:09 AM] Debugged API integration issues with new payment gateway. 
+[11:12:09 AM] Debugged API integration issues with new payment gateway.
 
-[12:30:44 PM] Synced with UX team to finalize dashboard feature design. 
+[12:30:44 PM] Synced with UX team to finalize dashboard feature design.
 
-[02:15:20 PM] Discussed next sprint priorities in bi-weekly planning meeting. 
+[02:15:20 PM] Discussed next sprint priorities in bi-weekly planning meeting.
 
-[03:47:18 PM] Researched search algorithm optimization techniques using Elasticsearch. 
+[03:47:18 PM] Researched search algorithm optimization techniques using Elasticsearch.
 
-[04:25:51 PM] Created prototype for new notification system; planning to test with real user data next week. 
+[04:25:51 PM] Created prototype for new notification system; planning to test with real user data next week.
 
-[05:08:33 PM] Updated project documentation to reflect recent architecture changes. 
+[05:08:33 PM] Updated project documentation to reflect recent architecture changes.
 
-[06:22:54 PM] Set up automated tests for new microservices to catch issues earlier in development. 
+[06:22:54 PM] Set up automated tests for new microservices to catch issues earlier in development.
 
 [06:45:10 PM] Reviewed PRs and provided feedback to team.
 
 ## Tags:
+
 #sprint_backlog #api_integration #ux_design #sprint_planning #search_optimization #notification_system #project_documentation #automated_testing #code_review
 
 ## Action Items:
+
 - Test the new notification system with real user data next week.
 
-------
+---
 
 The items extracted to action items will be added to Apple Reminders with a deadline of next morning 0900.
 
@@ -144,10 +147,9 @@ Here is a brief explanation of each configuration item:
 
 - `base_url`: This is the (optional) base URL for the OpenAI API. The script will send requests to this URL to interact with the API. For example, `"https://api.openai.com/v1/"`.
 
-- `api_key`: This is your OpenAI API key. The script will use this key to authenticate with the OpenAI API. 
+- `api_key`: This is your OpenAI API key. The script will use this key to authenticate with the OpenAI API.
 
 - `model`: This is the model that the script will use for the OpenAI API. For example, `"gpt-4o"`.
-
 
 ## Usage
 
@@ -164,6 +166,8 @@ Here is a brief explanation of each argument:
 - `--replace-summary`: If this argument is provided, the script will replace the existing summary instead of appending to it.
 
 - `--meetingnotes`: If this argument is provided, the script will generate and save meeting notes.
+
+- `--date`: Optional date string to force meetingnotes or daily notes to be processed for a specific date. The format should be `YYYY-MM-DD`.
 
 Here is an example of how to run the script with some arguments:
 
