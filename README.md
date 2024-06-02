@@ -167,7 +167,7 @@ Here is a brief explanation of each argument:
 
 - `--meetingnotes`: If this argument is provided, the script will generate and save meeting notes.
 
-- `--date`: Optional date string to force meetingnotes or daily notes to be processed for a specific date. The format should be `YYYY-MM-DD`.
+- `--date`: Optional date string to force meetingnotes or daily notes to be processed for a specific date. The format should be `YYYY-MM-DD`. In case of weekly notes this value reflect the start date
 
 Here is an example of how to run the script with some arguments:
 

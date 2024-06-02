@@ -31,7 +31,7 @@ class NotesService:
         today_notes = pattern.findall(notes)
         return "\n".join(today_notes)
 
-    def extract_weekly_notes(self, markdown, days=7):
+    def extract_weekly_notes(self, markdown, date_str=None, days=7):
         """
         Fetch notes from the last 'days' days from a markdown string.
 
@@ -42,19 +42,31 @@ class NotesService:
         Returns:
             list: List of notes from the last 'days' days
         """
+        if date_str is not None:
+            try:
+                datetime.strptime(date_str, "%Y-%m-%d")
+            except ValueError:
+                print("Invalid date string. Using today's date instead.")
+                date_str = get_date_str()
+        else:
+            date_str = get_date_str()
+
         notes = []
         pattern = r"\[(.*?)\] (.*?)(?=\[\d{4}-\d{2}-\d{2}|\Z)"
         for match in re.finditer(pattern, markdown, re.DOTALL):
             timestamp, note = match.groups()
             notes.append((timestamp, note.strip()))
 
-        current_date = datetime.now()
-        start_date = current_date - timedelta(days=days)
+        date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+        end_date = date_obj + timedelta(days=days)
+        start_date = date_obj
 
         recent_notes = [
             f"{timestamp}: {note}"
             for timestamp, note in notes
-            if datetime.strptime(timestamp, "%Y-%m-%d %I:%M:%S %p") > start_date
+            if start_date
+            <= datetime.strptime(timestamp, "%Y-%m-%d %I:%M:%S %p")
+            <= end_date
         ]
         return "\n".join(recent_notes)
 

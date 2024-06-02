@@ -40,9 +40,7 @@ def process_weekly_notes(config, args):
     openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
 
     notes = notes_service.load_notes()
-    start_date, end_date = get_week_range()
-    weekly_notes = notes_service.extract_weekly_notes(notes)
-    print(weekly_notes)
+    weekly_notes = notes_service.extract_weekly_notes(notes, args.date)
     if not weekly_notes:
         print("No notes found for the past week.")
         return
@@ -197,7 +195,11 @@ def save_meeting_notes(meeting_data, output_dir="MeetingNotes"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Note Summarizer")
-    parser.add_argument("--date", type=str, help="Date to fetch notes from")
+    parser.add_argument(
+        "--date",
+        type=str,
+        help="Date to fetch notes from (or start date for weekly notes)",
+    )
     parser.add_argument(
         "--config", type=str, default="config.yaml", help="Path to configuration file"
     )
