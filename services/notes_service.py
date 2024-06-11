@@ -52,7 +52,8 @@ class NotesService:
             date_str = get_date_str()
 
         notes = []
-        pattern = r"\[(.*?)\] (.*?)(?=\[\d{4}-\d{2}-\d{2}|\Z)"
+        # pattern = r"\[(.*?)\] (.*?)(?=\[\d{4}-\d{2}-\d{2}|\Z)"
+        pattern = r"\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [AP]M)\] (.*?)(?=\[\d{4}-\d{2}-\d{2}|\Z)"
         for match in re.finditer(pattern, markdown, re.DOTALL):
             timestamp, note = match.groups()
             notes.append((timestamp, note.strip()))

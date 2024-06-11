@@ -31,7 +31,7 @@ def process_daily_notes(config, args):
             add_tasks_to_reminders(tasks)
 
         write_daily_summary(
-            config, summary, tasks, tags, today_notes, args.replace_summary
+            config, summary, tasks, tags, today_notes, args.replace_summary, args.date
         )
 
 
@@ -93,18 +93,30 @@ def add_tasks_to_reminders(tasks):
         ReminderService.add_to_reminders(task)
 
 
-def write_daily_summary(config, summary, tasks, tags, today_notes, replace_summary):
+def write_daily_summary(config, summary, tasks, tags, today_notes, replace_summary, today_str):
     # Prepare the folder structure
-    now = datetime.now()
+    if today_str is not None:
+        # Step 2: Validate `today_str` as a date string
+        try:
+            datetime.strptime(today_str, "%Y-%m-%d")
+        except ValueError:
+            print("Invalid date string. Using today's date instead.")
+            today_str = get_date_str()
+    else:
+        today_str = get_date_str()
+
+
+    # now = datetime.now()
+    now = datetime.strptime(today_str, "%Y-%m-%d")
     year = now.strftime("%Y")
     month = now.strftime("%m")
     week_number = now.strftime("%U")
-    date_str = get_date_str()
+    # date_str = get_date_str()
 
     output_dir = create_output_dir(
         os.path.expanduser(f"{config['daily_output_dir']}/{year}/{month}/{week_number}")
     )
-    output_file = os.path.join(output_dir, f"{date_str}.md")
+    output_file = os.path.join(output_dir, f"{today_str}.md")
 
     if replace_summary or not os.path.exists(output_file):
         content = create_daily_summary_content(summary, tasks, tags, today_notes)
