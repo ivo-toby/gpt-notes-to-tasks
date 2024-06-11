@@ -8,11 +8,20 @@ class ReminderService:
             f"Do you want to add the task '{task}' to reminders? (y/n): "
         )
         if user_input.lower() == "y":
+            # script = f"""
+            # tell application "Reminders"
+            #     set myRemind to (current date) + 1 * days
+            #     set the time of myRemind to 9 * hours
+            #     make new reminder with properties {{name:"{task}", due date:myRemind}}
+            # end tell
+            # """
             script = f"""
             tell application "Reminders"
-                set myRemind to (current date) + 1 * days
-                set the time of myRemind to 9 * hours
-                make new reminder with properties {{name:"{task}", due date:myRemind}}
+
+    			set mylist to list "Work"
+                tell mylist 
+                    make new reminder with properties {{name:"{task}"}}
+                end tell
             end tell
             """
             applescript.run(script)
