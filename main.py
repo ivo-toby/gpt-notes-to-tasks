@@ -8,6 +8,8 @@ from services.notes_service import NotesService
 from services.openai_service import OpenAIService
 from services.reminder_service import ReminderService
 
+from services.learning_service import LearningService
+
 
 def process_daily_notes(config, args):
     notes_service = NotesService(config["daily_notes_file"])
@@ -93,7 +95,9 @@ def add_tasks_to_reminders(tasks):
         ReminderService.add_to_reminders(task)
 
 
-def write_daily_summary(config, summary, tasks, tags, today_notes, replace_summary, today_str):
+def write_daily_summary(
+    config, summary, tasks, tags, today_notes, replace_summary, today_str
+):
     # Prepare the folder structure
     if today_str is not None:
         # Step 2: Validate `today_str` as a date string
@@ -104,7 +108,6 @@ def write_daily_summary(config, summary, tasks, tags, today_notes, replace_summa
             today_str = get_date_str()
     else:
         today_str = get_date_str()
-
 
     # now = datetime.now()
     now = datetime.strptime(today_str, "%Y-%m-%d")
@@ -175,6 +178,24 @@ def create_weekly_summary_content(weekly_summary, weekly_notes):
     )
 
 
+def process_new_learnings(config, args):
+    learning_service = LearningService(
+        config["learnings_file"], config["learnings_output_dir"]
+    )
+    openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
+    learning_service.process_new_learnings(openai_service)
+    print("New learnings processed successfully.")
+
+
+def update_existing_learnings(config, args):
+    learning_service = LearningService(
+        config["learnings_file"], config["learnings_output_dir"]
+    )
+    openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
+    learning_service.update_existing_learnings(openai_service)
+    print("Existing learnings updated successfully.")
+
+
 def save_meeting_notes(meeting_data, output_dir="MeetingNotes"):
     date_str = meeting_data.get("date", datetime.now().strftime("%Y-%m-%d"))
     subject = meeting_data.get("meeting_subject", "meeting").replace(" ", "_").lower()
@@ -206,7 +227,9 @@ def save_meeting_notes(meeting_data, output_dir="MeetingNotes"):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Note Summarizer")
+    parser = argparse.ArgumentParser(
+        description="Note Summarizer and Learning Processor"
+    )
     parser.add_argument(
         "--date",
         type=str,
@@ -234,13 +257,23 @@ if __name__ == "__main__":
         action="store_true",
         help="Generate and save meeting notes",
     )
+    parser.add_argument(
+        "--process-learnings", action="store_true", help="Process new learnings"
+    )
+    parser.add_argument(
+        "--update-learnings", action="store_true", help="Update existing learnings"
+    )
     args = parser.parse_args()
 
     config = load_config(args.config)
-
-    if args.meetingnotes:
+    if args.process_learnings:
+        process_new_learnings(config, args)
+    elif args.update_learnings:
+        update_existing_learnings(config, args)
+    elif args.meetingnotes:
         process_meeting_notes(config, args)
     elif args.weekly:
         process_weekly_notes(config, args)
     else:
         process_daily_notes(config, args)
+        process_meeting_notes(config, args)

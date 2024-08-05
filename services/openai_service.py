@@ -1,11 +1,89 @@
 from openai import OpenAI
 from utils.config_loader import load_config
+import os
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 
 class OpenAIService:
-    def __init__(self, api_key, model="gpt-4o"):
+    def __init__(self, api_key, model="gpt-4o-mini"):
         self.model = model
         self.client = OpenAI(api_key=api_key)
+
+    def generate_learning_title(self, learning):
+        prompt = f"Generate a concise short title for the following learning. Do not use quotation marks in the title:\n\n{learning}"
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=50,
+        )
+        title = response.choices[0].message.content.strip()
+        # Remove any remaining quotation marks, just in case
+        return title.replace('"', "").replace("'", "")
+
+    def generate_learning_tags(self, learning):
+        prompt = f"Generate relevant tags for the following learning, formatted in snake-case, each tag should be prefixed with a #-sign, split the tags with a , :\n\n{learning}"
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=50,
+        )
+        return [tag.strip() for tag in response.choices[0].message.content.split(",")]
+
+    def identify_related_learnings(self, learning, learnings_dir, max_candidates=10):
+        learnings = []
+        for filename in os.listdir(learnings_dir):
+            if filename.endswith(".md"):
+                with open(os.path.join(learnings_dir, filename), "r") as file:
+                    content = file.read()
+                    learnings.append({"filename": filename, "content": content})
+
+        if not learnings:
+            print("No existing learnings found to relate to.")
+            return []
+
+        # Step 1: Use TF-IDF and cosine similarity to find potential candidates
+        vectorizer = TfidfVectorizer(stop_words="english")
+        tfidf_matrix = vectorizer.fit_transform(
+            [learning] + [l["content"] for l in learnings]
+        )
+        cosine_similarities = cosine_similarity(
+            tfidf_matrix[0:1], tfidf_matrix[1:]
+        ).flatten()
+        related_docs_indices = cosine_similarities.argsort()[-max_candidates:][::-1]
+
+        candidates = [learnings[i] for i in related_docs_indices]
+
+        # Step 2: Use OpenAI to rank the candidates
+        prompt = f"Given the following learning:\n\n{learning}\n\nRank the following learnings by relevance (most relevant first), returning only the numbers of the relevant ones:\n\n"
+        for i, l in enumerate(candidates):
+            prompt += f"{i+1}. {l['content'][:200]}...\n\n"
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=50,
+        )
+
+        try:
+            related_indices = [
+                int(index.strip())
+                for index in response.choices[0].message.content.split(",")
+                if index.strip().isdigit()
+            ]
+        except ValueError:
+            print("No valid related learnings identified.")
+            return []
+
+        return [
+            {
+                "filename": candidates[i - 1]["filename"],
+                "title": candidates[i - 1]["content"].split("\n")[0][2:],
+            }
+            for i in related_indices
+            if 1 <= i <= len(candidates)
+        ][:3]  # Limit to top 3 related learnings
 
     def chat_completion_with_function(self, messages, functions, function_call):
         try:
