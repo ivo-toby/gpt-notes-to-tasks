@@ -279,3 +279,4 @@ if __name__ == "__main__":
     else:
         process_daily_notes(config, args)
         process_meeting_notes(config, args)
+        process_new_learnings(config, args)
