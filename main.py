@@ -183,8 +183,10 @@ def process_new_learnings(config, args):
         config["learnings_file"], config["learnings_output_dir"]
     )
     openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
+
+    print("Starting process_new_learnings")
     learning_service.process_new_learnings(openai_service)
-    print("New learnings processed successfully.")
+    print("DEBUG: Finished process_new_learnings")
 
 
 def update_existing_learnings(config, args):
