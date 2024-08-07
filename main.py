@@ -262,9 +262,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--process-learnings", action="store_true", help="Process new learnings"
     )
-    parser.add_argument(
-        "--update-learnings", action="store_true", help="Update existing learnings"
-    )
     args = parser.parse_args()
 
     config = load_config(args.config)

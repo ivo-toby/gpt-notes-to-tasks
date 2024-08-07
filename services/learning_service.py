@@ -12,16 +12,12 @@ class LearningService:
         return load_notes(self.learnings_file)
 
     def identify_new_learnings(self, content):
-        pattern = r"\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [AP]M)\](.*?)(?=\n\[|\Z)"
+        pattern = r"(\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [AP]M)\](.*?)(?=\n\[|\Z))"
         matches = re.findall(pattern, content, re.DOTALL)
-        new_learnings = []
-        for timestamp, learning in matches:
-            if "processed: true" not in learning:
-                new_learnings.append((timestamp, learning.strip()))
-        return new_learnings
-
-    def add_metadata(self, learning_entry, filename):
-        return f"{learning_entry}\n\nprocessed: true\nfilename: {filename}\n\n"
+        return [
+            (full_match.strip(), timestamp, learning.strip())
+            for full_match, timestamp, learning in matches
+        ]
 
     def generate_markdown_file(self, timestamp, learning, title, tags):
         clean_title = re.sub(r"[^\w\s-]", "", title.lower())
@@ -39,11 +35,10 @@ class LearningService:
 
     def process_new_learnings(self, openai_service):
         content = self.load_learnings()
-        new_learnings = self.identify_new_learnings(content)
+        learnings = self.identify_new_learnings(content)
 
-        print(f"Processing {len(new_learnings)} new learnings...")
-        updated_content = content
-        for timestamp, learning in new_learnings:
+        print(f"Processing {len(learnings)} learnings...")
+        for full_match, timestamp, learning in learnings:
             print(f"Processing learning: {learning[:100]}...")
             title = openai_service.generate_learning_title(learning)
             print(f"Title: {title}")
@@ -54,11 +49,14 @@ class LearningService:
 
             filename = self.generate_markdown_file(timestamp, learning, title, tags)
 
-            # Update the specific learning entry with metadata
-            learning_entry = f"[{timestamp}]{learning}"
-            updated_entry = self.add_metadata(learning_entry, filename)
-            updated_content = updated_content.replace(learning_entry, updated_entry)
+            # Remove the processed learning from the content
+            content = content.replace(full_match, "").strip()
 
-        write_summary_to_file(self.learnings_file, updated_content)
-        print("Processing complete.")
+        # Remove any consecutive newlines
+        content = re.sub(r"\n{3,}", "\n\n", content)
 
+        # Write the updated content back to the file
+        write_summary_to_file(self.learnings_file, content)
+        print(
+            "Processing complete. Processed learnings have been removed from the source file."
+        )
