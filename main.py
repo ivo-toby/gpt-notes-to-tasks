@@ -189,15 +189,6 @@ def process_new_learnings(config, args):
     print("DEBUG: Finished process_new_learnings")
 
 
-def update_existing_learnings(config, args):
-    learning_service = LearningService(
-        config["learnings_file"], config["learnings_output_dir"]
-    )
-    openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
-    learning_service.update_existing_learnings(openai_service)
-    print("Existing learnings updated successfully.")
-
-
 def save_meeting_notes(meeting_data, output_dir="MeetingNotes"):
     date_str = meeting_data.get("date", datetime.now().strftime("%Y-%m-%d"))
     subject = meeting_data.get("meeting_subject", "meeting").replace(" ", "_").lower()
@@ -267,8 +258,6 @@ if __name__ == "__main__":
     config = load_config(args.config)
     if args.process_learnings:
         process_new_learnings(config, args)
-    elif args.update_learnings:
-        update_existing_learnings(config, args)
     elif args.meetingnotes:
         process_meeting_notes(config, args)
     elif args.weekly:
