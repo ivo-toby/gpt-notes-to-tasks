@@ -1,6 +1,8 @@
 # Daily Notes AI Summarization
 
-This Python script is a note summarizer that processes daily, weekly, and meeting notes. It uses the OpenAI API to summarize notes and identify tasks. The script accepts several command-line arguments to customize its behavior.
+This Python script is a note summarizer that processes daily, weekly, and meeting notes. It uses the OpenAI API (gpt4o-mini) to summarize notes and identify tasks.
+It can also extract action items and add them to the Apple Reminders App. Last but not least; it's able to extract learnings from a separate file and autogenerate tags for each of the learnings. Learnings are stored individually in a separate folder.
+The script accepts several command-line arguments to customize its behavior.
 
 ## What does it do?
 
@@ -10,10 +12,11 @@ Based on timestamped notes in a single file it can generate
 - A weekly summary (including accomplishments and learnings)
 - Extract meeting notes
 - Extract action items and add them to the Apple Reminders App.
+- Extract learnings and generate tags for each of the learnings
 
 _Please note_
 
-This script has been entirely created by CodeLLama and GPT-4o
+This script has been entirely created by CodeLLama, GPT-4o and Claude 3.5 Sonnet.
 
 ## Why this script
 
@@ -151,11 +154,17 @@ Here is a brief explanation of each configuration item:
 
 - `model`: This is the model that the script will use for the OpenAI API. For example, `"gpt-4o"`.
 
+- `learnings_file`: this is the path to the file where your learnings are stored. The script will read from this file when processing learnings. For example, `"~/Documents/notes/learnings.md"`.
+
+- `learnings_output_dir`: this is the directory where the script will save the processed learnings. For example, `"~/Documents/notes/learnings"`.
+
 ## Usage
 
 Here is a brief explanation of each argument:
 
 - `--config`: This argument is used to specify the path to the configuration file. The default value is `config.yaml`.
+
+- `--process-learnings`: If this argument is provided, the script will process learnings from the file that is configured in the `config.yaml` file : `learnings_file`
 
 - `--weekly`: If this argument is provided, the script will process weekly notes.
 
