@@ -1,5 +1,5 @@
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 from utils.config_loader import load_config
 from utils.file_handler import create_output_dir, load_notes, write_summary_to_file
@@ -135,16 +135,28 @@ def write_daily_summary(
     write_summary_to_file(output_file, content)
 
 
-def write_weekly_summary(config, weekly_summary, weekly_notes, replace_summary):
-    # Prepare the output file path
-    start_date, end_date = get_week_range()
-    year = start_date.strftime("%Y")
-    week_number = start_date.strftime("%U")
+def write_weekly_summary(
+    config, weekly_summary, weekly_notes, replace_summary, date_str=None
+):
+    # Determine the date to use
+    if date_str:
+        current_date = datetime.strptime(date_str, "%Y-%m-%d")
+    else:
+        current_date = datetime.now()
 
+    # Calculate the start of the week (Monday)
+    start_date = current_date - timedelta(days=current_date.weekday())
+    end_date = start_date + timedelta(days=6)
+
+    # Get ISO year and week number
+    iso_year, iso_week, _ = start_date.isocalendar()
+    week_identifier = f"{iso_year}-W{iso_week:02d}"
+
+    # Prepare the output file path
     output_dir = create_output_dir(
-        os.path.expanduser(f"{config['weekly_output_dir']}/{year}/{week_number}")
+        os.path.expanduser(f"{config['weekly_output_dir']}/{iso_year}/{iso_week:02d}")
     )
-    output_file = os.path.join(output_dir, f"week_{week_number}_summary.md")
+    output_file = os.path.join(output_dir, f"week_{week_identifier}_summary.md")
 
     if replace_summary or not os.path.exists(output_file):
         content = create_weekly_summary_content(weekly_summary, weekly_notes)
@@ -154,6 +166,10 @@ def write_weekly_summary(config, weekly_summary, weekly_notes, replace_summary):
             existing_content = file.read()
         additional_content = create_weekly_summary_content(weekly_summary, weekly_notes)
         content = existing_content + "\n\n" + additional_content
+
+    # Add date range to the content
+    date_range = f"# Weekly Summary: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}\n\n"
+    content = date_range + content
 
     write_summary_to_file(output_file, content)
 

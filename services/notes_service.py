@@ -32,44 +32,25 @@ class NotesService:
         return "\n".join(today_notes)
 
     def extract_weekly_notes(self, markdown, date_str=None, days=7):
-        """
-        Fetch notes from the last 'days' days from a markdown string.
-
-        Args:
-            markdown (str): Markdown string containing notes and timestamps
-            days (int): Number of days to look back from the current date
-
-        Returns:
-            list: List of notes from the last 'days' days
-        """
-        if date_str is not None:
-            try:
-                datetime.strptime(date_str, "%Y-%m-%d")
-            except ValueError:
-                print("Invalid date string. Using today's date instead.")
-                date_str = get_date_str()
-        else:
+        if date_str is None:
             date_str = get_date_str()
 
-        notes = []
-        # pattern = r"\[(.*?)\] (.*?)(?=\[\d{4}-\d{2}-\d{2}|\Z)"
+        date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+        start_of_week = date_obj - timedelta(days=date_obj.weekday())
+        end_of_week = start_of_week + timedelta(days=6)
+
+        iso_year, iso_week, _ = start_of_week.isocalendar()
+        week_identifier = f"{iso_year}-W{iso_week:02d}"
+
         pattern = r"\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [AP]M)\] (.*?)(?=\[\d{4}-\d{2}-\d{2}|\Z)"
+        notes = []
         for match in re.finditer(pattern, markdown, re.DOTALL):
             timestamp, note = match.groups()
-            notes.append((timestamp, note.strip()))
+            note_date = datetime.strptime(timestamp, "%Y-%m-%d %I:%M:%S %p")
+            if start_of_week <= note_date <= end_of_week:
+                notes.append(f"{timestamp}: {note.strip()}")
 
-        date_obj = datetime.strptime(date_str, "%Y-%m-%d")
-        end_date = date_obj + timedelta(days=days)
-        start_date = date_obj
-
-        recent_notes = [
-            f"{timestamp}: {note}"
-            for timestamp, note in notes
-            if start_date
-            <= datetime.strptime(timestamp, "%Y-%m-%d %I:%M:%S %p")
-            <= end_date
-        ]
-        return "\n".join(recent_notes)
+        return week_identifier, "\n".join(notes)
 
     def save_meeting_notes(meeting_data, output_dir="MeetingNotes"):
         date_str = meeting_data.get("date", datetime.now().strftime("%Y-%m-%d"))
