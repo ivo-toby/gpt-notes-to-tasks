@@ -1,4 +1,4 @@
-apip install -r requirements.txtpplescript==2021.2.9
+applescript==2021.2.9
 openai==1.40.1
 PyYAML==6.0.1
 scikit_learn==1.5.1
