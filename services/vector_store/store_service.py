@@ -251,6 +251,61 @@ class VectorStoreService:
             
         return connected_docs
 
+    def find_backlinks(self, doc_id: str) -> List[Dict[str, Any]]:
+        """
+        Find all notes that link to the given document.
+
+        Args:
+            doc_id: Document ID to find backlinks for
+
+        Returns:
+            List of documents linking to this document
+        """
+        results = self.collections['links'].query(
+            query_embeddings=[[1.0] * 384],  # Dummy embedding for exact match
+            where={"target_id": doc_id},
+            include=["metadatas"]
+        )
+        
+        backlinks = []
+        for metadata in results['metadatas'][0]:
+            backlinks.append({
+                'source_id': metadata['source_id'],
+                'relationship': metadata.get('relationship', 'linked'),
+                'link_type': metadata.get('link_type', 'wiki'),
+                'context': metadata.get('context', '')
+            })
+            
+        return backlinks
+
+    def get_note_content(self, doc_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get the content and metadata for a specific note.
+
+        Args:
+            doc_id: Document ID to retrieve
+
+        Returns:
+            Dictionary containing note content and metadata, or None if not found
+        """
+        try:
+            results = self.collections['notes'].get(
+                where={"doc_id": doc_id},
+                include=["documents", "metadatas", "embeddings"]
+            )
+            
+            if not results['ids']:
+                return None
+
+            return {
+                'content': results['documents'][0],
+                'metadata': results['metadatas'][0],
+                'embedding': results['embeddings'][0]
+            }
+        except Exception as e:
+            logger.error(f"Error retrieving note content: {str(e)}")
+            return None
+
     def update_document(self, doc_id: str, new_chunks: List[str], 
                        new_embeddings: List[List[float]], 
                        metadata: Optional[Dict[str, Any]] = None) -> None:
