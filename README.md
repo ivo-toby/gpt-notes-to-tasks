@@ -1,22 +1,24 @@
 # Daily Notes AI Summarization
 
-This Python script is a note summarizer that processes daily, weekly, and meeting notes. It uses the OpenAI API (gpt4o-mini) to summarize notes and identify tasks.
-It can also extract action items and add them to the Apple Reminders App. Last but not least; it's able to extract learnings from a separate file and autogenerate tags for each of the learnings. Learnings are stored individually in a separate folder.
+This Python script is a note summarizer that processes daily, weekly, and meeting notes. It uses the OpenAI API to summarize notes, identify tasks, and maintain a semantic knowledge base.
+It can extract action items and add them to the Apple Reminders App, extract learnings with auto-generated tags, and find semantically similar content across all your notes.
 The script accepts several command-line arguments to customize its behavior.
 
 ## What does it do?
 
-Based on timestamped notes in a single file it can generate
+Based on timestamped notes in a single file it can:
 
-- A daily summary, including tags and actionable items
-- A weekly summary (including accomplishments and learnings)
+- Generate a daily summary, including tags and actionable items
+- Create a weekly summary (including accomplishments and learnings)
 - Extract meeting notes
-- Extract action items and add them to the Apple Reminders App.
+- Extract action items and add them to the Apple Reminders App
 - Extract learnings and generate tags for each of the learnings
+- Build and maintain a semantic knowledge base of your notes
+- Find related content across all your notes using semantic search
 
 _Please note_
 
-This script has been entirely created by CodeLLama, GPT-4o and Claude 3.5 Sonnet.
+This script has been entirely created by CodeLLama, GPT-4, and Claude 3.5 Sonnet.
 
 ## Why this script
 
@@ -152,11 +154,17 @@ Here is a brief explanation of each configuration item:
 
 - `api_key`: This is your OpenAI API key. The script will use this key to authenticate with the OpenAI API.
 
-- `model`: This is the model that the script will use for the OpenAI API. For example, `"gpt-4o"`.
+- `model`: This is the model that the script will use for the OpenAI API. For example, `"gpt-4"`.
 
 - `learnings_file`: this is the path to the file where your learnings are stored. The script will read from this file when processing learnings. For example, `"~/Documents/notes/learnings.md"`.
 
 - `learnings_output_dir`: this is the directory where the script will save the processed learnings. For example, `"~/Documents/notes/learnings"`.
+
+- `vector_store`: Configuration for the semantic knowledge base:
+  - `path`: Location to store the vector database. For example, `"~/Documents/notes/.vector_store"`.
+  - `chunk_size_min`: Minimum size of text chunks for semantic analysis (default: 50).
+  - `chunk_size_max`: Maximum size of text chunks for semantic analysis (default: 500).
+  - `similarity_threshold`: Minimum similarity score for matching content (default: 0.85).
 
 ## Usage
 
@@ -176,7 +184,30 @@ Here is a brief explanation of each argument:
 
 - `--meetingnotes`: If this argument is provided, the script will generate and save meeting notes.
 
-- `--date`: Optional date string to force meetingnotes or daily notes to be processed for a specific date. The format should be `YYYY-MM-DD`. In case of weekly notes this value reflect the start date
+- `--date`: Optional date string to force meetingnotes or daily notes to be processed for a specific date. The format should be `YYYY-MM-DD`. In case of weekly notes this value reflect the start date.
+
+### Vector Store Operations
+
+The script now includes commands for managing and querying your semantic knowledge base:
+
+- `--vector-store`: Enable vector store operations
+- `--reindex`: Reindex all notes in the vector store
+- `--query TEXT`: Search for content similar to TEXT
+- `--limit N`: Return at most N results (default: 5)
+
+Examples:
+```bash
+# Reindex all notes in the vector store
+python main.py --vector-store --reindex
+
+# Search for content about "python async programming"
+python main.py --vector-store --query "python async programming" --limit 10
+
+# Test reindexing without making changes
+python main.py --vector-store --reindex --dry-run
+```
+
+### Basic Usage Examples
 
 Here is an example of how to run the script with some arguments:
 
@@ -188,21 +219,27 @@ In this example, the script will process weekly notes using the configuration fi
 
 ## Cron
 
-You can set up a cron job to run this script at the end of each day. Here’s how to add a cron job on a Unix-based system:
+You can set up a cron job to run this script at the end of each day. Here's how to add a cron job on a Unix-based system:
 
 ```bash
 crontab -e
 ```
 
-Add this line to the file:
+Add these lines to the file:
 
 ```bash
+# Process daily notes at 6 PM
 0 18 * * * /usr/bin/python3 /path/to/the/script.py
+
+# Update vector store at midnight
+0 0 * * * /usr/bin/python3 /path/to/the/script.py --vector-store --reindex
 ```
 
-This cron job will run the script daily at 6 PM.
+This will run the daily processing at 6 PM and update the semantic index at midnight.
 
 ## Future Improvements
 
-- Add mail functionality to send the summary and action items to an email address.
-- Add support for a vector search API to search for related notes in order to link them
+- Add mail functionality to send the summary and action items to an email address
+- Add support for processing URLs and adding their content to the knowledge base
+- Add support for processing emails and converting them to notes
+- Add support for generating automated connections between notes
