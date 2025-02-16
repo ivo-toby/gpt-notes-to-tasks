@@ -94,7 +94,8 @@ class SummaryService:
                         'source': rel_path,
                         'type': note_type,
                         'filename': file,
-                        'path': filepath
+                        'path': filepath,
+                        'modified_time': os.path.getmtime(filepath)
                     })
                 except Exception as e:
                     print(f"Error processing file {filepath}: {str(e)}")

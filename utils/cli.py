@@ -66,7 +66,12 @@ def setup_argparser() -> argparse.ArgumentParser:
     kb_parser.add_argument(
         "--reindex",
         action="store_true",
-        help="Reindex all notes in the vector store"
+        help="Force reindex of all notes in the vector store"
+    )
+    kb_parser.add_argument(
+        "--update",
+        action="store_true",
+        help="Update only modified notes in the vector store (faster than full reindex)"
     )
     kb_parser.add_argument(
         "--query",

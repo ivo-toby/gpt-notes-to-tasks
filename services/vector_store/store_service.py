@@ -30,6 +30,12 @@ class VectorStoreService:
                 allow_reset=True
             )
         )
+
+        # Create metadata collection for tracking document updates
+        self.metadata_collection = self.client.get_or_create_collection(
+            name="metadata",
+            metadata={"description": "Document metadata and update tracking"}
+        )
         
         # Create collections for different types of content
         self.collections = {
@@ -46,6 +52,33 @@ class VectorStoreService:
                 metadata={"description": "External references and citations"}
             )
         }
+
+    def needs_update(self, doc_id: str, modified_time: float) -> bool:
+        """
+        Check if a document needs to be updated in the vector store.
+
+        Args:
+            doc_id: Document ID to check
+            modified_time: Last modification timestamp of the document
+
+        Returns:
+            bool: True if document needs updating, False otherwise
+        """
+        try:
+            # Check if document exists in metadata collection
+            results = self.metadata_collection.get(
+                ids=[doc_id],
+                include=['metadatas']
+            )
+            
+            if not results['ids']:
+                return True  # Document not in store, needs to be added
+            
+            stored_time = results['metadatas'][0].get('modified_time', 0)
+            return modified_time > stored_time
+        except Exception as e:
+            logger.error(f"Error checking document update status: {str(e)}")
+            return True  # If in doubt, update the document
 
     def add_document(self, doc_id: str, chunks: List[str], embeddings: List[List[float]], 
                     metadata: Optional[Dict[str, Any]] = None) -> None:
@@ -101,6 +134,13 @@ class VectorStoreService:
         # Store link relationships
         self._store_link_relationships(doc_id, chunks, metadata)
         
+        # Store document metadata for update tracking
+        if metadata and 'modified_time' in metadata:
+            self.metadata_collection.upsert(
+                ids=[doc_id],
+                metadatas=[{'modified_time': metadata['modified_time']}]
+            )
+            
         logger.info(f"Added document {doc_id} with {len(chunks)} chunks to vector store")
 
     def find_similar(self, query_embedding: List[float], limit: int = 5, 
