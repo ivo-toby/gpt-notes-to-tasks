@@ -157,6 +157,21 @@ def add_tasks_to_reminders(tasks):
 def write_daily_summary(
     config, summary, tasks, tags, today_notes, replace_summary, today_str
 ):
+    """
+    Write the daily summary to a file in the configured output directory.
+
+    Args:
+        config (dict): Application configuration
+        summary (str): Generated summary text
+        tasks (list): List of identified tasks
+        tags (list): List of relevant tags
+        today_notes (str): Original notes content
+        replace_summary (bool): Whether to replace existing summary
+        today_str (str): Date string in YYYY-MM-DD format
+
+    Returns:
+        None
+    """
     # Prepare the folder structure
     if today_str is not None:
         # Step 2: Validate `today_str` as a date string
@@ -197,6 +212,19 @@ def write_daily_summary(
 def write_weekly_summary(
     config, weekly_summary, weekly_notes, replace_summary, date_str=None
 ):
+    """
+    Write the weekly summary to a file in the configured output directory.
+
+    Args:
+        config (dict): Application configuration
+        weekly_summary (str): Generated weekly summary
+        weekly_notes (str): Original weekly notes
+        replace_summary (bool): Whether to replace existing summary
+        date_str (str, optional): Date string in YYYY-MM-DD format. Defaults to None.
+
+    Returns:
+        None
+    """
     # Determine the date to use
     if date_str:
         current_date = datetime.strptime(date_str, "%Y-%m-%d")
@@ -241,6 +269,18 @@ def write_weekly_summary(
 
 
 def create_daily_summary_content(summary, tasks, tags, today_notes):
+    """
+    Create formatted content for daily summary markdown file.
+
+    Args:
+        summary (str): Generated summary text
+        tasks (list): List of identified tasks
+        tags (list): List of relevant tags
+        today_notes (str): Original notes content
+
+    Returns:
+        str: Formatted markdown content
+    """
     return (
         "# Daily Summary\n\n"
         f"## Summary\n\n{summary}\n\n"
@@ -253,6 +293,16 @@ def create_daily_summary_content(summary, tasks, tags, today_notes):
 
 
 def create_weekly_summary_content(weekly_summary, weekly_notes):
+    """
+    Create formatted content for weekly summary markdown file.
+
+    Args:
+        weekly_summary (str): Generated weekly summary
+        weekly_notes (str): Original weekly notes
+
+    Returns:
+        str: Formatted markdown content
+    """
     return (
         "# Weekly Summary\n\n"
         f"## Summary\n\n{weekly_summary}\n\n" + "\n\n## Original Notes\n\n"
@@ -272,6 +322,16 @@ def process_new_learnings(config, args):
 
 
 def save_meeting_notes(meeting_data, output_dir="MeetingNotes"):
+    """
+    Save meeting notes to a markdown file.
+
+    Args:
+        meeting_data (dict): Meeting information including subject, participants, etc.
+        output_dir (str, optional): Directory to save meeting notes. Defaults to "MeetingNotes".
+
+    Returns:
+        None
+    """
     date_str = meeting_data.get("date", datetime.now().strftime("%Y-%m-%d"))
     subject = meeting_data.get("meeting_subject", "meeting").replace(" ", "_").lower()
     file_name = f"{date_str}_{subject}.md"
