@@ -1,7 +1,7 @@
 """Service for generating embeddings using OpenAI's API."""
 
 from typing import List, Dict, Any
-from openai import OpenAI
+import openai
 import logging
 from tqdm import tqdm
 
@@ -18,7 +18,8 @@ class EmbeddingService:
             config: Configuration dictionary containing API settings
         """
         self.config = config
-        self.client = OpenAI(api_key=config['api_key'])
+        openai.api_key = config['api_key']
+        self.client = openai.OpenAI()
         self.model = "text-embedding-ada-002"  # Current best model for embeddings
         self.batch_size = 100  # Maximum batch size for embedding requests
 

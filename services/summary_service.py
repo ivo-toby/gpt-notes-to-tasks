@@ -5,6 +5,7 @@ This module handles the generation and storage of note summaries.
 """
 
 import os
+import fnmatch
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
@@ -29,6 +30,77 @@ class SummaryService:
         self.openai_service = OpenAIService(
             api_key=config["api_key"], model=config["model"]
         )
+
+    def get_all_notes(self) -> List[Dict[str, str]]:
+        """
+        Get all notes from the entire vault.
+
+        Returns:
+            List[Dict[str, str]]: List of notes with their metadata
+        """
+        entries = []
+        notes_dir = os.path.expanduser(self.config.get('notes_base_dir', '~/Documents/notes'))
+        exclude_patterns = self.config.get('knowledge_base', {}).get('exclude_patterns', [])
+        
+        def should_exclude(path: str) -> bool:
+            """Check if path matches any exclude pattern."""
+            rel_path = os.path.relpath(path, notes_dir)
+            return any(fnmatch.fnmatch(rel_path, pattern) for pattern in exclude_patterns)
+
+        def get_note_type(filepath: str) -> str:
+            """Determine the type of note based on its location and content."""
+            if 'daily' in filepath:
+                return 'daily'
+            elif 'Weekly' in filepath:
+                return 'weekly'
+            elif 'meetingnotes' in filepath:
+                return 'meeting'
+            elif 'learnings' in filepath:
+                return 'learning'
+            return 'note'  # default type
+
+        # Recursively walk through all directories
+        for root, dirs, files in os.walk(notes_dir):
+            # Skip excluded directories
+            dirs[:] = [d for d in dirs if not should_exclude(os.path.join(root, d))]
+            
+            for file in files:
+                if not file.endswith('.md') or should_exclude(os.path.join(root, file)):
+                    continue
+
+                filepath = os.path.join(root, file)
+                rel_path = os.path.relpath(filepath, notes_dir)
+                
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        
+                    # Try to extract date from filename or content
+                    date = None
+                    if file.startswith('20') and len(file) >= 10:  # Filename like 2024-02-16
+                        date = file[:10]
+                    else:
+                        # Look for date in first line of content
+                        first_line = content.split('\n')[0]
+                        if first_line.startswith('[20'):  # [2024-02-16
+                            date = first_line[1:11]
+                        
+                    note_type = get_note_type(filepath)
+                    
+                    entries.append({
+                        'id': rel_path,  # Use relative path as ID
+                        'content': content,
+                        'date': date,
+                        'source': rel_path,
+                        'type': note_type,
+                        'filename': file,
+                        'path': filepath
+                    })
+                except Exception as e:
+                    print(f"Error processing file {filepath}: {str(e)}")
+                    continue
+
+        return entries
 
     def process_daily_notes(
         self, date_str: Optional[str] = None, dry_run: bool = False,

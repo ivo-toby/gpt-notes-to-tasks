@@ -15,15 +15,10 @@ def setup_argparser() -> argparse.ArgumentParser:
         argparse.ArgumentParser: Configured argument parser
     """
     parser = argparse.ArgumentParser(
-        description="Note Summarizer and Learning Processor"
+        description="Note Summarizer and Knowledge Base Manager"
     )
     
-    # Existing arguments
-    parser.add_argument(
-        "--date",
-        type=str,
-        help="Date to fetch notes from (or start date for weekly notes)",
-    )
+    # Basic arguments
     parser.add_argument(
         "--config", 
         type=str, 
@@ -31,57 +26,93 @@ def setup_argparser() -> argparse.ArgumentParser:
         help="Path to configuration file"
     )
     parser.add_argument(
-        "--weekly", 
-        action="store_true", 
-        help="Process weekly notes"
-    )
-    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Do not write to files or create reminders",
     )
-    parser.add_argument(
-        "--skip-reminders", 
-        action="store_true", 
-        help="Do not create reminders"
+
+    # Create subparsers for different command groups
+    subparsers = parser.add_subparsers(dest='command', help='Command to execute')
+
+    # Notes processing commands
+    notes_parser = subparsers.add_parser('notes', help='Process daily and weekly notes')
+    notes_parser.add_argument(
+        "--date",
+        type=str,
+        help="Date to fetch notes from (or start date for weekly notes)",
     )
-    parser.add_argument(
+    notes_parser.add_argument("--weekly", action="store_true", help="Process weekly notes")
+    notes_parser.add_argument(
+        "--skip-reminders", action="store_true", help="Do not create reminders"
+    )
+    notes_parser.add_argument(
         "--replace-summary",
         action="store_true",
         help="Replace existing summary instead of appending",
     )
-    parser.add_argument(
+    notes_parser.add_argument(
         "--meetingnotes",
         action="store_true",
         help="Generate and save meeting notes",
     )
-    parser.add_argument(
+    notes_parser.add_argument(
         "--process-learnings", 
         action="store_true", 
         help="Process new learnings"
     )
 
-    # Vector store arguments
-    vector_group = parser.add_argument_group('Vector Store Operations')
-    vector_group.add_argument(
-        "--vector-store",
-        action="store_true",
-        help="Perform vector store operations"
-    )
-    vector_group.add_argument(
+    # Vector store commands
+    kb_parser = subparsers.add_parser('kb', help='Knowledge base operations')
+    kb_parser.add_argument(
         "--reindex",
         action="store_true",
         help="Reindex all notes in the vector store"
     )
-    vector_group.add_argument(
+    kb_parser.add_argument(
         "--query",
         type=str,
         help="Search for similar content in the vector store"
     )
-    vector_group.add_argument(
+    kb_parser.add_argument(
         "--limit",
         type=int,
-        help="Maximum number of results to return for vector store queries (default: 5)"
+        default=5,
+        help="Maximum number of results to return for vector store queries"
+    )
+    kb_parser.add_argument(
+        "--show-connections",
+        type=str,
+        metavar="NOTE_PATH",
+        help="Show connections for a specific note"
+    )
+    kb_parser.add_argument(
+        "--find-by-tag",
+        type=str,
+        metavar="TAG",
+        help="Find notes with specific tag"
+    )
+    kb_parser.add_argument(
+        "--find-by-date",
+        type=str,
+        metavar="DATE",
+        help="Find notes from specific date (YYYY-MM-DD)"
+    )
+    kb_parser.add_argument(
+        "--note-structure",
+        type=str,
+        metavar="NOTE_PATH",
+        help="Display semantic structure of a note"
+    )
+    kb_parser.add_argument(
+        "--note-type",
+        type=str,
+        choices=['daily', 'weekly', 'meeting', 'learning', 'note'],
+        help="Filter results by note type"
+    )
+    kb_parser.add_argument(
+        "--graph",
+        action="store_true",
+        help="Output note connections in Mermaid graph format"
     )
 
     return parser

@@ -5,9 +5,19 @@ meeting_notes_output_dir: "~/Documents/notes/meetingnotes"
 base_url: "https://api.openai.com/v1/"
 api_key: ""
 reminders_list: ""
-model: "gpt-4o"
+model: "gpt-4"
 learnings_file: "~/Documents/notes/jrnl/learnings.md"
 learnings_output_dir: "~/Documents/notes/learnings"
+
+# Notes directory for knowledge base
+notes_base_dir: "~/Documents/notes"  # Base directory for all notes
+knowledge_base:
+  exclude_patterns: 
+    - "*.excalidraw.md"  # Exclude Excalidraw files
+    - "templates/*"       # Exclude template directory
+    - ".obsidian/*"      # Exclude Obsidian config
+    - ".trash/*"         # Exclude trash
+    - ".git/*"           # Exclude git directory
 
 # Vector store settings
 vector_store:

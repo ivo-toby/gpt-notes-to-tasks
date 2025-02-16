@@ -87,7 +87,7 @@ At the end of the day the file containing notes would look like this:
 
 If you'd use the script on this journal like this:
 
-`python main.py --skip-reminders --dry-run`
+`python main.py notes --skip-reminders --dry-run`
 
 This would be the generated output:
 
@@ -142,23 +142,17 @@ The items extracted to action items will be added to Apple Reminders with a dead
 Copy `config.template.yml` to `config.yml` and setup the correct values.
 Here is a brief explanation of each configuration item:
 
-- `daily_notes_file`: This is the path to the file where your daily notes are stored. The script will read from this file when processing daily notes. For example, `"~/Documents/notes/jrnl/daily.md"`.
+- `notes_base_dir`: Base directory containing all your notes. For example, `"~/Documents/notes"`.
 
-- `daily_output_dir`: This is the directory where the script will save the processed daily notes. For example, `"~/Documents/notes/daily"`.
-
-- `weekly_output_dir`: This is the directory where the script will save the processed weekly notes. For example, `"~/Documents/notes/Weekly"`.
-
-- `meeting_notes_output_dir`: This is the directory where the script will save the processed meeting notes. For example, `"~/Documents/notes/meetingnotes"`.
-
-- `base_url`: This is the (optional) base URL for the OpenAI API. The script will send requests to this URL to interact with the API. For example, `"https://api.openai.com/v1/"`.
-
-- `api_key`: This is your OpenAI API key. The script will use this key to authenticate with the OpenAI API.
-
-- `model`: This is the model that the script will use for the OpenAI API. For example, `"gpt-4"`.
-
-- `learnings_file`: this is the path to the file where your learnings are stored. The script will read from this file when processing learnings. For example, `"~/Documents/notes/learnings.md"`.
-
-- `learnings_output_dir`: this is the directory where the script will save the processed learnings. For example, `"~/Documents/notes/learnings"`.
+- `knowledge_base`: Settings for scanning and processing notes:
+  ```yaml
+  exclude_patterns: 
+    - "*.excalidraw.md"  # Exclude Excalidraw files
+    - "templates/*"       # Exclude template directory
+    - ".obsidian/*"      # Exclude Obsidian config
+    - ".trash/*"         # Exclude trash
+    - ".git/*"           # Exclude git directory
+  ```
 
 - `vector_store`: Configuration for the semantic knowledge base:
   - `path`: Location to store the vector database. For example, `"~/Documents/notes/.vector_store"`.
@@ -166,80 +160,94 @@ Here is a brief explanation of each configuration item:
   - `chunk_size_max`: Maximum size of text chunks for semantic analysis (default: 500).
   - `similarity_threshold`: Minimum similarity score for matching content (default: 0.85).
 
+Plus the standard configuration for note processing:
+- `daily_notes_file`: Source file for daily notes
+- `daily_output_dir`: Directory for processed daily notes
+- `weekly_output_dir`: Directory for weekly summaries
+- `meeting_notes_output_dir`: Directory for meeting notes
+- `api_key`: OpenAI API key
+- `model`: OpenAI model to use (e.g., "gpt-4")
+- `learnings_file`: Source file for learnings
+- `learnings_output_dir`: Directory for processed learnings
+
 ## Usage
 
-Here is a brief explanation of each argument:
+The script now has two main command groups:
 
-- `--config`: This argument is used to specify the path to the configuration file. The default value is `config.yaml`.
+### Notes Processing Commands
 
-- `--process-learnings`: If this argument is provided, the script will process learnings from the file that is configured in the `config.yaml` file : `learnings_file`
-
-- `--weekly`: If this argument is provided, the script will process weekly notes.
-
-- `--dry-run`: If this argument is provided, the script will not write to files or create reminders. It's useful for testing the script without making changes.
-
-- `--skip-reminders`: If this argument is provided, the script will not create reminders.
-
-- `--replace-summary`: If this argument is provided, the script will replace the existing summary instead of appending to it.
-
-- `--meetingnotes`: If this argument is provided, the script will generate and save meeting notes.
-
-- `--date`: Optional date string to force meetingnotes or daily notes to be processed for a specific date. The format should be `YYYY-MM-DD`. In case of weekly notes this value reflect the start date.
-
-### Vector Store Operations
-
-The script now includes commands for managing and querying your semantic knowledge base:
-
-- `--vector-store`: Enable vector store operations
-- `--reindex`: Reindex all notes in the vector store
-- `--query TEXT`: Search for content similar to TEXT
-- `--limit N`: Return at most N results (default: 5)
-
-Examples:
-```bash
-# Reindex all notes in the vector store
-python main.py --vector-store --reindex
-
-# Search for content about "python async programming"
-python main.py --vector-store --query "python async programming" --limit 10
-
-# Test reindexing without making changes
-python main.py --vector-store --reindex --dry-run
-```
-
-### Basic Usage Examples
-
-Here is an example of how to run the script with some arguments:
+Process daily notes, weekly summaries, and learnings:
 
 ```bash
-python main.py --config my_config.yaml --weekly --dry-run
+# Process daily notes
+python main.py notes --date 2024-02-16 --dry-run
+
+# Generate weekly summary
+python main.py notes --weekly --replace-summary
+
+# Process meeting notes
+python main.py notes --meetingnotes
+
+# Process learnings
+python main.py notes --process-learnings
 ```
 
-In this example, the script will process weekly notes using the configuration file `my_config.yaml`, and it will not write to files or create reminders because the `--dry-run` argument is provided.
+### Knowledge Base Commands
+
+Manage and query your semantic knowledge base:
+
+```bash
+# Reindex all notes (with dry run)
+python main.py kb --reindex --dry-run
+
+# Search for content
+python main.py kb --query "python async programming" --limit 10
+
+# Show connections for a note
+python main.py kb --show-connections "path/to/note.md"
+
+# Show connections as a Mermaid graph
+python main.py kb --show-connections "path/to/note.md" --graph
+
+# Find notes by tag
+python main.py kb --find-by-tag "programming"
+
+# Find notes by date
+python main.py kb --find-by-date "2024-02-16"
+
+# Show note's semantic structure
+python main.py kb --note-structure "path/to/note.md"
+
+# Search within specific note type
+python main.py kb --query "meeting agenda" --note-type "meeting"
+```
+
+### Common Options
+
+These options can be used with any command:
+
+- `--config`: Specify config file (default: config.yaml)
+- `--dry-run`: Show what would happen without making changes
+- `--limit N`: Maximum number of results to return (default: 5)
 
 ## Cron
 
-You can set up a cron job to run this script at the end of each day. Here's how to add a cron job on a Unix-based system:
-
-```bash
-crontab -e
-```
-
-Add these lines to the file:
+You can set up cron jobs to run the script automatically:
 
 ```bash
 # Process daily notes at 6 PM
-0 18 * * * /usr/bin/python3 /path/to/the/script.py
+0 18 * * * /usr/bin/python3 /path/to/script.py notes
 
-# Update vector store at midnight
-0 0 * * * /usr/bin/python3 /path/to/the/script.py --vector-store --reindex
+# Update knowledge base at midnight
+0 0 * * * /usr/bin/python3 /path/to/script.py kb --reindex
 ```
-
-This will run the daily processing at 6 PM and update the semantic index at midnight.
 
 ## Future Improvements
 
-- Add mail functionality to send the summary and action items to an email address
-- Add support for processing URLs and adding their content to the knowledge base
-- Add support for processing emails and converting them to notes
-- Add support for generating automated connections between notes
+- Add mail functionality to send summaries
+- Add support for processing URLs and their content
+- Add support for processing emails into notes
+- Add automatic metadata extraction
+- Add support for bi-directional linking
+- Add support for timeline views
+- Add support for knowledge graph visualization
