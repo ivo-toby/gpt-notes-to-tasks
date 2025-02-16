@@ -5,6 +5,13 @@ meeting_notes_output_dir: "~/Documents/notes/meetingnotes"
 base_url: "https://api.openai.com/v1/"
 api_key: ""
 reminders_list: ""
-model": "gpt-4o"
+model: "gpt-4o"
 learnings_file: "~/Documents/notes/jrnl/learnings.md"
 learnings_output_dir: "~/Documents/notes/learnings"
+
+# Vector store settings
+vector_store:
+  path: "~/Documents/notes/.vector_store"  # Local ChromaDB storage
+  chunk_size_min: 50   # Minimum characters per chunk
+  chunk_size_max: 500  # Maximum characters per chunk
+  similarity_threshold: 0.85  # Minimum similarity score for matches
