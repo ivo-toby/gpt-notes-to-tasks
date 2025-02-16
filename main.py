@@ -1,3 +1,11 @@
+"""
+Note processing and summarization tool.
+
+This module provides functionality for processing daily notes, weekly summaries,
+meeting notes and learning entries. It interfaces with various services to
+generate summaries, extract tasks, and manage reminders.
+"""
+
 import argparse
 import os
 from datetime import datetime, timedelta
@@ -12,6 +20,16 @@ from utils.file_handler import create_output_dir, write_summary_to_file
 
 
 def process_daily_notes(config, args):
+    """
+    Process daily notes to generate summaries and extract tasks.
+
+    Args:
+        config (dict): Application configuration dictionary
+        args (Namespace): Command line arguments
+
+    Returns:
+        None
+    """
     notes_service = NotesService(config["daily_notes_file"])
     openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
 
@@ -22,9 +40,9 @@ def process_daily_notes(config, args):
         print("No notes found for today.")
         return
     result = openai_service.summarize_notes_and_identify_tasks(today_notes)
-    summary = result["summary"]
-    tasks = result["actionable_items"]
-    tags = result["tags"]
+    summary = result.get("summary", "No summary available")
+    tasks = result.get("actionable_items", [])
+    tags = result.get("tags", [])
 
     display_results(summary, tasks, tags)
 
@@ -126,7 +144,7 @@ def write_daily_summary(
         content = create_daily_summary_content(summary, tasks, tags, today_notes)
     else:
         # Append summary to existing file's content
-        with open(output_file, "r") as file:
+        with open(output_file, "r", encoding="utf-8") as file:
             existing_content = file.read()
         additional_content = create_daily_summary_content(
             summary, tasks, tags, today_notes
