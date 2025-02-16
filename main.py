@@ -89,13 +89,13 @@ def process_weekly_notes(cfg, cli_args):
         )
 
 
-def process_meeting_notes(config, args):
+def process_meeting_notes(cfg, cli_args):
     """
     Process daily notes to generate structured meeting notes.
 
     Args:
-        config (dict): Application configuration dictionary
-        args (Namespace): Command line arguments
+        cfg (dict): Application configuration dictionary
+        cli_args (Namespace): Command line arguments
 
     Returns:
         None
