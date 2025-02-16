@@ -6,17 +6,15 @@ meeting notes and learning entries. It interfaces with various services to
 generate summaries, extract tasks, and manage reminders.
 """
 
-"""
-Note processing and summarization tool.
-
-This module provides functionality for processing daily notes, weekly summaries,
-meeting notes and learning entries. It interfaces with various services to
-generate summaries, extract tasks, and manage reminders.
-"""
+import argparse
+import os
+from datetime import datetime, timedelta
 
 from services.learning_service import LearningService
 from services.summary_service import SummaryService
 from services.meeting_service import MeetingService
+from services.reminder_service import ReminderService
+from services.openai_service import OpenAIService
 from utils.config_loader import load_config
 from utils.date_utils import get_date_str
 from utils.file_handler import create_output_dir, write_summary_to_file
