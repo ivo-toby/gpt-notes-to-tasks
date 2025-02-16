@@ -289,12 +289,26 @@ class VectorStoreService:
             Dictionary containing note content and metadata, or None if not found
         """
         try:
+            logger.info(f"Retrieving content for note: {doc_id}")
             results = self.collections['notes'].get(
                 where={"doc_id": doc_id},
                 include=["documents", "metadatas", "embeddings"]
             )
             
             if not results['ids']:
+                logger.warning(f"No content found for note: {doc_id}")
+                # Try searching by chunk IDs
+                chunk_results = self.collections['notes'].get(
+                    ids=[f"{doc_id}_chunk_0"],
+                    include=["documents", "metadatas", "embeddings"]
+                )
+                if chunk_results['ids']:
+                    logger.info(f"Found content via chunk ID for note: {doc_id}")
+                    return {
+                        'content': chunk_results['documents'][0],
+                        'metadata': chunk_results['metadatas'][0],
+                        'embedding': chunk_results['embeddings'][0]
+                    }
                 return None
 
             return {

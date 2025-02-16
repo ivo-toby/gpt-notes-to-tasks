@@ -28,11 +28,15 @@ class LinkService:
         Returns:
             Dictionary containing relationship analysis
         """
+        logger.info(f"Starting relationship analysis for note: {note_id}")
+        
         # Get existing connections
         direct_links = self.vector_store.find_connected_notes(note_id)
+        logger.info(f"Found {len(direct_links)} direct links")
         
         # Find semantic relationships
         note_content = self.vector_store.get_note_content(note_id)
+        logger.info(f"Retrieved note content: {'Yes' if note_content else 'No'}")
         if note_content:
             semantic_links = self.vector_store.find_similar(
                 query_embedding=note_content['embedding'],
