@@ -8,11 +8,13 @@ generate summaries, extract tasks, and manage reminders.
 
 import os
 from datetime import datetime
+from typing import Dict, Any
 from services.learning_service import LearningService
 from services.summary_service import SummaryService
 from services.meeting_service import MeetingService
 from services.openai_service import OpenAIService
 from services.vector_store import VectorStoreService, EmbeddingService, ChunkingService
+from services.knowledge.link_service import LinkService
 from utils.config_loader import load_config
 from utils.cli import setup_argparser
 import logging
