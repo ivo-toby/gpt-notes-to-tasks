@@ -27,6 +27,18 @@ class ChunkingService:
         self.min_chunk_size = config.get("vector_store", {}).get("chunk_size_min", 50)
         self.max_chunk_size = config.get("vector_store", {}).get("chunk_size_max", 500)
 
+    def chunk_document(self, content: str, doc_type: str = "note") -> List[Dict[str, Any]]:
+        """
+        Chunk a document into semantically coherent parts.
+
+        Args:
+            content: Content to chunk
+            doc_type: Type of document
+
+        Returns:
+            List of chunks with metadata
+        """
+        return self._process_chunk_group(content, doc_type=doc_type)
 
     @staticmethod
     def create(config: Dict[str, Any]) -> 'ChunkingService':
@@ -87,7 +99,9 @@ class ParagraphChunkingService:
 
 
 
-    def _process_chunk_group(
+
+class ParagraphChunkingService:
+    """Manages paragraph-based chunking of documents."""
         self,
         content: str,
         doc_type: str = "note",
