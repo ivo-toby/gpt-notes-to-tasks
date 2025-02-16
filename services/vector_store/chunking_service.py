@@ -1,5 +1,6 @@
 """Service for semantic chunking of documents using LLM assistance."""
 
+import json
 from typing import List, Dict, Any
 import openai
 import logging
