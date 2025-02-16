@@ -138,7 +138,9 @@ class VectorStoreService:
         if metadata and 'modified_time' in metadata:
             self.metadata_collection.upsert(
                 ids=[doc_id],
-                metadatas=[{'modified_time': metadata['modified_time']}]
+                metadatas=[{'modified_time': metadata['modified_time']}],
+                embeddings=[[1.0] * 384],  # Dummy embedding for metadata tracking
+                documents=[""]  # Empty document as it's just for tracking
             )
             
         logger.info(f"Added document {doc_id} with {len(chunks)} chunks to vector store")
