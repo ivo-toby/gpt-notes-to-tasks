@@ -119,6 +119,8 @@ Return only the JSON array with no additional text."""
 
                 # Validate the structure of each chunk
                 valid_chunks = []
+                oversized_chunks = []
+                
                 for chunk in chunks_data:
                     if (
                         isinstance(chunk, dict)
@@ -133,12 +135,25 @@ Return only the JSON array with no additional text."""
                         ):
                             valid_chunks.append(chunk)
                         else:
-                            logger.warning(
-                                f"Chunk size {len(chunk_content)} outside bounds for title: {chunk['title']}"
+                            logger.info(
+                                f"Chunk size {len(chunk_content)} outside bounds for '{chunk['title']}', falling back to paragraph chunking"
                             )
+                            oversized_chunks.append(chunk)
+
+                # Process oversized chunks using paragraph chunking
+                if oversized_chunks:
+                    paragraph_chunker = ParagraphChunkingService(self.config)
+                    for chunk in oversized_chunks:
+                        sub_chunks = paragraph_chunker.chunk_document(chunk["content"], doc_type=doc_type)
+                        # Add original title as prefix to maintain context
+                        for sub_chunk in sub_chunks:
+                            sub_chunk["metadata"]["title"] = f"{chunk['title']} (Part {sub_chunks.index(sub_chunk) + 1})"
+                        valid_chunks.extend(sub_chunks)
 
                 if not valid_chunks:
                     raise ValueError("No valid chunks found in LLM response")
+                
+                logger.info(f"Final chunk count: {len(valid_chunks)} ({len(oversized_chunks)} oversized chunks split)")
 
                 # Add metadata to valid chunks
                 for chunk in valid_chunks:
