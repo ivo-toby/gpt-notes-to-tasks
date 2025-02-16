@@ -100,8 +100,7 @@ class ParagraphChunkingService:
 
 
 
-class ParagraphChunkingService:
-    """Manages paragraph-based chunking of documents."""
+    def _process_chunk_group(
         self,
         content: str,
         doc_type: str = "note",
