@@ -1,12 +1,45 @@
+"""
+OpenAI service integration.
+
+This module provides a service wrapper for OpenAI API interactions,
+handling various text generation tasks including summarization,
+meeting notes extraction, and learning processing.
+"""
+
+from typing import Dict, List, Optional, Any
 from openai import OpenAI
+from openai.types.chat import ChatCompletion
 
 
 class OpenAIService:
-    def __init__(self, api_key, model="gpt-4o-mini"):
+    """
+    Service for interacting with OpenAI's API.
+
+    This service handles all OpenAI API calls, providing methods for
+    various text generation and processing tasks.
+    """
+
+    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
+        """
+        Initialize the OpenAI service.
+
+        Args:
+            api_key (str): OpenAI API key
+            model (str, optional): Model to use for completions. Defaults to "gpt-4o-mini"
+        """
         self.model = model
         self.client = OpenAI(api_key=api_key)
 
-    def generate_learning_title(self, learning):
+    def generate_learning_title(self, learning: str) -> str:
+        """
+        Generate a title for a learning entry using AI.
+
+        Args:
+            learning (str): Learning entry content
+
+        Returns:
+            str: Generated title
+        """
         prompt = (
             f"Generate a concise short title for the following learning:\n\n{learning}"
         )
@@ -17,7 +50,16 @@ class OpenAIService:
         )
         return response.choices[0].message.content.strip()
 
-    def generate_learning_tags(self, learning):
+    def generate_learning_tags(self, learning: str) -> List[str]:
+        """
+        Generate relevant tags for a learning entry using AI.
+
+        Args:
+            learning (str): Learning entry content
+
+        Returns:
+            List[str]: List of generated tags
+        """
         prompt = f"Generate relevant tags for the following learning, formatted in snake-case, each tag should be prefixed with a #-sign, split the tags with a , :\n\n{learning}"
         response = self.client.chat.completions.create(
             model=self.model,
@@ -26,7 +68,26 @@ class OpenAIService:
         )
         return [tag.strip() for tag in response.choices[0].message.content.split(",")]
 
-    def chat_completion_with_function(self, messages, functions, function_call):
+    def chat_completion_with_function(
+        self, 
+        messages: List[Dict[str, str]], 
+        functions: List[Dict[str, Any]], 
+        function_call: Dict[str, str]
+    ) -> Optional[Any]:
+        """
+        Make a chat completion request with function calling.
+
+        Args:
+            messages (List[Dict[str, str]]): Chat messages
+            functions (List[Dict[str, Any]]): Function definitions
+            function_call (Dict[str, str]): Function to call
+
+        Returns:
+            Optional[Any]: Response message or None if error occurs
+
+        Raises:
+            Exception: If API call fails
+        """
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -37,10 +98,20 @@ class OpenAIService:
             )
             return response.choices[0].message
         except Exception as e:
-            print(f"An error occurred: {e}")
+            print(f"An error occurred during API call: {e}")
             return None
 
-    def summarize_notes_and_identify_tasks(self, notes):
+    def summarize_notes_and_identify_tasks(self, notes: str) -> Optional[Dict[str, Any]]:
+        """
+        Summarize notes and extract tasks using AI.
+
+        Args:
+            notes (str): Notes content to process
+
+        Returns:
+            Optional[Dict[str, Any]]: Dictionary containing summary, tasks, and tags
+                                    or None if processing fails
+        """
         prompt = f"""
         Given the provided journal entries, please generate an easy-to-read daily journal in Markdown format, which captures all the knowledge, links, and facts from the journal entries for future reference. 
         Following the summary, enumerate any actionable items identified within the journal entries that are actionable by the owner of the notes. 
@@ -96,7 +167,16 @@ class OpenAIService:
         else:
             return None
 
-    def generate_weekly_summary(self, notes):
+    def generate_weekly_summary(self, notes: str) -> Optional[str]:
+        """
+        Generate a weekly summary from notes using AI.
+
+        Args:
+            notes (str): Notes content to summarize
+
+        Returns:
+            Optional[str]: Generated summary or None if processing fails
+        """
         prompt = f"""
         Given the provided journal entries, please generate an easy-to-read weekly journal in Markdown format, which captures all the knowledge, links, and facts from the journal entries for future reference. 
         Following the summary, create a section that enumerates accomplishments based on the journal entries. 
@@ -143,7 +223,17 @@ class OpenAIService:
             print(f"An error occurred: {e}")
             return None
 
-    def generate_meeting_notes(self, notes):
+    def generate_meeting_notes(self, notes: str) -> Optional[Dict[str, List[Dict[str, Any]]]]:
+        """
+        Extract and format meeting notes from general notes using AI.
+
+        Args:
+            notes (str): Notes content to process
+
+        Returns:
+            Optional[Dict[str, List[Dict[str, Any]]]]: Dictionary containing list of meeting notes
+                                                      or None if processing fails
+        """
         prompt = f"""
 From the following journal entries, infer which entries may have been taken during a meeting or call. For each meeting or call, extract details to create meeting notes in Markdown format based on this template:
 # {{date}} Meeting Notes - {{meeting_subject}}
