@@ -1,29 +1,64 @@
+"""
+Reminder service for macOS.
+
+This module provides functionality to interact with the macOS Reminders app,
+allowing the addition of tasks to the default Work list.
+"""
+
+from typing import Optional
 import applescript
 
 
 class ReminderService:
-    @staticmethod
-    def add_to_reminders(task):
-        user_input = input(
-            f"Do you want to add the task '{task}' to reminders? (y/n): "
-        )
-        if user_input.lower() == "y":
-            # script = f"""
-            # tell application "Reminders"
-            #     set myRemind to (current date) + 1 * days
-            #     set the time of myRemind to 9 * hours
-            #     make new reminder with properties {{name:"{task}", due date:myRemind}}
-            # end tell
-            # """
-            script = f"""
-            tell application "Reminders"
+    """
+    Service for managing reminders in macOS Reminders app.
 
-    			set mylist to list "Work"
-                tell mylist 
-                    make new reminder with properties {{name:"{task}"}}
-                end tell
+    This service provides methods to add tasks to the Reminders app
+    with user confirmation.
+    """
+
+    @staticmethod
+    def add_to_reminders(task: str) -> bool:
+        """
+        Add a task to the Work list in Reminders app with user confirmation.
+
+        Args:
+            task (str): Task description to add as a reminder
+
+        Returns:
+            bool: True if task was added successfully, False otherwise
+        """
+        try:
+            user_input = input(
+                f"Do you want to add the task '{task}' to reminders? (y/n): "
+            ).lower()
+
+            if user_input != "y":
+                print("Task not added to reminders.")
+                return False
+
+            script = f'''
+            tell application "Reminders"
+                try
+                    set mylist to list "Work"
+                    tell mylist
+                        make new reminder with properties {{name:"{task}"}}
+                    end tell
+                    return true
+                on error errMsg
+                    return false
+                end try
             end tell
-            """
-            applescript.run(script)
-        else:
-            print("Task not added to reminders.")
+            '''
+
+            result = applescript.run(script)
+            if result:
+                print(f"Task '{task}' added to Work list in Reminders.")
+                return True
+            else:
+                print("Failed to add task to Reminders.")
+                return False
+
+        except Exception as e:
+            print(f"Error adding reminder: {str(e)}")
+            return False
