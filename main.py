@@ -99,7 +99,7 @@ def process_knowledge_base(cfg, cli_args):
                 query_embedding=query_embedding,
                 limit=cli_args.limit,
                 doc_type=cli_args.note_type,
-                threshold=cfg.get('vector_store', {}).get('similarity_threshold', 0.85)
+                threshold=cfg.get('vector_store', {}).get('similarity_threshold', 0.3)  # Lower default threshold
             )
             if not results:
                 logger.info("No matching results found")

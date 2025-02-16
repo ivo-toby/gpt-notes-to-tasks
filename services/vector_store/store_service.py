@@ -195,8 +195,9 @@ class VectorStoreService:
             for i in range(len(results['ids'][0])):
                 similarity = 1 - results['distances'][0][i]  # Convert distance to similarity
                 if threshold and similarity < threshold:
-                    logger.debug(f"Skipping result with similarity {similarity} below threshold {threshold}")
+                    logger.info(f"Skipping result with similarity {similarity:.3f} below threshold {threshold}")
                     continue
+                logger.debug(f"Including result with similarity {similarity:.3f}")
                 
                 metadata = results['metadatas'][0][i]
                 # Parse stored JSON fields
