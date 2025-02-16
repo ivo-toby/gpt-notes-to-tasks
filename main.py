@@ -74,6 +74,10 @@ def process_knowledge_base(cfg, cli_args):
                         note['content'],
                         doc_type=note.get('type', 'note')
                     )
+                    if not chunks:
+                        logger.warning(f"No chunks generated for note: {note['id']}")
+                        continue
+                        
                     chunk_texts = [chunk['content'] for chunk in chunks]
                     logger.info(f"Generating embeddings for {len(chunk_texts)} chunks...")
                     embeddings = embedding_service.embed_chunks(chunk_texts)

@@ -123,13 +123,18 @@ class VectorStoreService:
             chunk_ids.append(chunk_id)
             chunk_metadata.append(chunk_meta)
 
-        # Add chunks to main notes collection
-        self.collections['notes'].add(
-            ids=chunk_ids,
-            embeddings=embeddings,
-            documents=chunks,
-            metadatas=chunk_metadata
-        )
+        # Only add if we have chunks
+        if chunk_ids:
+            # Add chunks to main notes collection
+            self.collections['notes'].add(
+                ids=chunk_ids,
+                embeddings=embeddings,
+                documents=chunks,
+                metadatas=chunk_metadata
+            )
+            logger.info(f"Added {len(chunk_ids)} chunks to vector store")
+        else:
+            logger.warning(f"No valid chunks to add for document {doc_id}")
         
         # Store link relationships
         self._store_link_relationships(doc_id, chunks, metadata)
