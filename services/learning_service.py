@@ -7,15 +7,16 @@ from notes, including generating titles and tags using AI services.
 
 import os
 import re
-from typing import List, Tuple, Optional
+from typing import List, Tuple
+
 from services.openai_service import OpenAIService
-from utils.file_handler import load_notes, write_summary_to_file, create_output_dir
+from utils.file_handler import load_notes, write_summary_to_file
 
 
 class LearningService:
     """
     Service for processing and managing learning entries.
-    
+
     This service handles loading learning entries from files, processing them
     with AI services to generate titles and tags, and saving them as individual
     markdown files.
@@ -112,7 +113,7 @@ class LearningService:
 
             os.makedirs(self.learnings_output_dir, exist_ok=True)
 
-            filename = self.generate_markdown_file(timestamp, learning, title, tags)
+            self.generate_markdown_file(timestamp, learning, title, tags)
 
             # Remove the processed learning from the content
             content = content.replace(full_match, "").strip()

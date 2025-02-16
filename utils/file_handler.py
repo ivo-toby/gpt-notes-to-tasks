@@ -6,7 +6,6 @@ and managing output directories with proper error handling.
 """
 
 import os
-from typing import Optional
 
 
 def load_notes(filename: str) -> str:
@@ -77,4 +76,3 @@ def create_output_dir(output_dir: str) -> str:
         raise PermissionError(f"Permission denied creating directory: {expanded_dir}")
     except OSError as e:
         raise OSError(f"Error creating directory {expanded_dir}: {str(e)}")
-
