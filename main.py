@@ -6,14 +6,17 @@ meeting notes and learning entries. It interfaces with various services to
 generate summaries, extract tasks, and manage reminders.
 """
 
-import argparse
-import os
-from datetime import datetime, timedelta
+"""
+Note processing and summarization tool.
+
+This module provides functionality for processing daily notes, weekly summaries,
+meeting notes and learning entries. It interfaces with various services to
+generate summaries, extract tasks, and manage reminders.
+"""
 
 from services.learning_service import LearningService
-from services.notes_service import NotesService
-from services.openai_service import OpenAIService
-from services.reminder_service import ReminderService
+from services.summary_service import SummaryService
+from services.meeting_service import MeetingService
 from utils.config_loader import load_config
 from utils.date_utils import get_date_str
 from utils.file_handler import create_output_dir, write_summary_to_file
@@ -24,35 +27,19 @@ def process_daily_notes(cfg, cli_args):
     Process daily notes to generate summaries and extract tasks.
 
     Args:
-        config (dict): Application configuration dictionary
-        args (Namespace): Command line arguments
+        cfg (dict): Application configuration dictionary
+        cli_args (Namespace): Command line arguments
 
     Returns:
         None
     """
-    notes_service = NotesService(cfg["daily_notes_file"])
-    openai_service = OpenAIService(api_key=cfg["api_key"], model=cfg["model"])
-
-    notes = notes_service.load_notes()
-    today_notes = notes_service.extract_today_notes(notes, cli_args.date)
-
-    if not today_notes:
-        print("No notes found for today.")
-        return
-    result = openai_service.summarize_notes_and_identify_tasks(today_notes)
-    summary = result.get("summary", "No summary available")
-    tasks = result.get("actionable_items", [])
-    tags = result.get("tags", [])
-
-    display_results(summary, tasks, tags)
-
-    if not cli_args.dry_run:
-        if not cli_args.skip_reminders:
-            add_tasks_to_reminders(tasks)
-
-        write_daily_summary(
-            cfg, summary, tasks, tags, today_notes, cli_args.replace_summary, cli_args.date
-        )
+    summary_service = SummaryService(cfg)
+    summary_service.process_daily_notes(
+        date_str=cli_args.date,
+        dry_run=cli_args.dry_run,
+        skip_reminders=cli_args.skip_reminders,
+        replace_summary=cli_args.replace_summary
+    )
 
 
 def process_weekly_notes(cfg, cli_args):
@@ -60,33 +47,18 @@ def process_weekly_notes(cfg, cli_args):
     Process and generate weekly note summaries.
 
     Args:
-        config (dict): Application configuration dictionary
-        args (Namespace): Command line arguments
+        cfg (dict): Application configuration dictionary
+        cli_args (Namespace): Command line arguments
 
     Returns:
         None
     """
-    notes_service = NotesService(cfg["daily_notes_file"])
-    openai_service = OpenAIService(api_key=cfg["api_key"], model=cfg["model"])
-
-    notes = notes_service.load_notes()
-    weekly_notes = notes_service.extract_weekly_notes(notes, cli_args.date)
-    if not weekly_notes:
-        print("No notes found for the past week.")
-        return
-
-    weekly_summary = openai_service.generate_weekly_summary(weekly_notes)
-
-    display_results(weekly_summary, "", "")
-
-    if not cli_args.dry_run:
-        write_weekly_summary(
-            cfg,
-            weekly_summary,
-            weekly_notes,
-            cli_args.replace_summary,
-            date_str=cli_args.date,
-        )
+    summary_service = SummaryService(cfg)
+    summary_service.process_weekly_notes(
+        date_str=cli_args.date,
+        dry_run=cli_args.dry_run,
+        replace_summary=cli_args.replace_summary
+    )
 
 
 def process_meeting_notes(cfg, cli_args):
@@ -100,23 +72,11 @@ def process_meeting_notes(cfg, cli_args):
     Returns:
         None
     """
-    notes_service = NotesService(cfg["daily_notes_file"])
-    openai_service = OpenAIService(api_key=cfg["api_key"], model=cfg["model"])
-
-    notes = notes_service.load_notes()
-    today_notes = notes_service.extract_today_notes(notes, cli_args.date)
-
-    if not today_notes:
-        print("No notes found for today.")
-        return
-
-    meeting_notes = openai_service.generate_meeting_notes(today_notes)
-    if not cli_args.dry_run:
-        for meeting in meeting_notes.get("meetings", []):
-            save_meeting_notes(meeting, cfg["meeting_notes_output_dir"])
-    else:
-        for meeting in meeting_notes["meetings"]:
-            print(meeting)
+    meeting_service = MeetingService(cfg)
+    meeting_service.process_meeting_notes(
+        date_str=cli_args.date,
+        dry_run=cli_args.dry_run
+    )
 
 
 def display_results(summary, tasks, tags):
