@@ -180,4 +180,15 @@ Return only the JSON array with no additional text."""
                 
         return list(dates)
 
-    # ... (rest of the class remains the same)
+    def chunk_document(self, content: str, doc_type: str = 'note') -> List[Dict[str, Any]]:
+        """
+        Chunk a document into semantically coherent parts.
+
+        Args:
+            content: Content to chunk
+            doc_type: Type of document
+
+        Returns:
+            List of chunks with metadata
+        """
+        return self._process_chunk_group(content, doc_type=doc_type)
