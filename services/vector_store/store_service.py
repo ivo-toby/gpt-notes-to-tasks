@@ -190,8 +190,8 @@ class VectorStoreService:
 
             logger.info(f"Found {len(results['ids'][0])} matching documents")
 
-        # Format results
-        similar_docs = []
+            # Format results
+            similar_docs = []
         for i in range(len(results['ids'][0])):
             similarity = 1 - results['distances'][0][i]  # Convert distance to similarity
             if threshold and similarity < threshold:
