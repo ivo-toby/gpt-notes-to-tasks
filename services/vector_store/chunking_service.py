@@ -27,6 +27,7 @@ class ChunkingService:
         self.min_chunk_size = config.get("vector_store", {}).get("chunk_size_min", 50)
         self.max_chunk_size = config.get("vector_store", {}).get("chunk_size_max", 500)
 
+
     @staticmethod
     def create(config: Dict[str, Any]) -> 'ChunkingService':
         """
