@@ -290,12 +290,14 @@ class VectorStoreService:
         """
         try:
             logger.info(f"Retrieving content for note: {doc_id}")
-            results = self.collections['notes'].get(
+            # First try exact match on doc_id
+            results = self.collections['notes'].query(
+                query_embeddings=[[1.0] * 384],  # Dummy embedding for exact match
                 where={"doc_id": doc_id},
                 include=["documents", "metadatas", "embeddings"]
             )
             
-            if not results['ids']:
+            if not results['ids'][0]:
                 logger.warning(f"No content found for note: {doc_id}")
                 # Try searching by chunk IDs
                 chunk_results = self.collections['notes'].get(
@@ -309,12 +311,13 @@ class VectorStoreService:
                         'metadata': chunk_results['metadatas'][0],
                         'embedding': chunk_results['embeddings'][0]
                     }
+                logger.error(f"Note not found in vector store: {doc_id}")
                 return None
 
             return {
-                'content': results['documents'][0],
-                'metadata': results['metadatas'][0],
-                'embedding': results['embeddings'][0]
+                'content': results['documents'][0][0],
+                'metadata': results['metadatas'][0][0],
+                'embedding': results['embeddings'][0][0]
             }
         except Exception as e:
             logger.error(f"Error retrieving note content: {str(e)}")
