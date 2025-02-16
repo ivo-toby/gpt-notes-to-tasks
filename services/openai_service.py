@@ -6,9 +6,9 @@ handling various text generation tasks including summarization,
 meeting notes extraction, and learning processing.
 """
 
-from typing import Any, Dict, List, Optional
-
+from typing import Any, Dict, List, Optional, cast
 from openai import OpenAI
+from openai.types.chat import ChatCompletion, ChatCompletionMessage, ChatCompletionMessageParam
 
 
 class OpenAIService:
@@ -43,12 +43,18 @@ class OpenAIService:
         prompt = (
             f"Generate a concise short title for the following learning:\n\n{learning}"
         )
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=50,
-        )
-        return response.choices[0].message.content.strip()
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=50,
+            )
+            if response.choices[0].message.content:
+                return response.choices[0].message.content.strip()
+            return "Untitled Learning"
+        except Exception as e:
+            print(f"Error generating title: {e}")
+            return "Untitled Learning"
 
     def generate_learning_tags(self, learning: str) -> List[str]:
         """
@@ -60,20 +66,30 @@ class OpenAIService:
         Returns:
             List[str]: List of generated tags
         """
-        prompt = f"Generate relevant tags for the following learning, formatted in snake-case, each tag should be prefixed with a #-sign, split the tags with a , :\n\n{learning}"
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=50,
+        prompt = (
+            "Generate relevant tags for the following learning, formatted in snake-case, "
+            "each tag should be prefixed with a #-sign, split the tags with a , :\n\n"
+            f"{learning}"
         )
-        return [tag.strip() for tag in response.choices[0].message.content.split(",")]
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=50,
+            )
+            if response.choices[0].message.content:
+                return [tag.strip() for tag in response.choices[0].message.content.split(",")]
+            return []
+        except Exception as e:
+            print(f"Error generating tags: {e}")
+            return []
 
     def chat_completion_with_function(
         self,
-        messages: List[Dict[str, str]],
+        messages: List[ChatCompletionMessageParam],
         functions: List[Dict[str, Any]],
         function_call: Dict[str, str],
-    ) -> Optional[Any]:
+    ) -> Optional[ChatCompletionMessage]:
         """
         Make a chat completion request with function calling.
 
@@ -164,9 +180,9 @@ class OpenAIService:
             messages, functions, function_call
         )
         if response:
-            meeting_notes_list = eval(response.function_call.arguments)
-            return meeting_notes_list
-        else:
+            if response and response.function_call and response.function_call.arguments:
+                import json
+                return json.loads(response.function_call.arguments)
             return None
 
     def generate_weekly_summary(self, notes: str) -> Optional[str]:
