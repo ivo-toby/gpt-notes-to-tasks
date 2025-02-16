@@ -1,7 +1,7 @@
 """Service for semantic chunking of documents using LLM assistance."""
 
 from typing import List, Dict, Any
-import openai
+from openai import OpenAI
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ class ChunkingService:
             config: Configuration dictionary containing API settings
         """
         self.config = config
-        self.client = openai.Client(api_key=config['api_key'])
+        self.client = OpenAI(api_key=config['api_key'])
         self.min_chunk_size = config.get('vector_store', {}).get('chunk_size_min', 50)
         self.max_chunk_size = config.get('vector_store', {}).get('chunk_size_max', 500)
 
