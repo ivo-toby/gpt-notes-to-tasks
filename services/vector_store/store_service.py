@@ -195,14 +195,18 @@ class VectorStoreService:
             for i in range(len(results['ids'][0])):
                 similarity = 1 - results['distances'][0][i]  # Convert distance to similarity
                 if threshold and similarity < threshold:
+                    logger.debug(f"Skipping result with similarity {similarity} below threshold {threshold}")
                     continue
                 
                 metadata = results['metadatas'][0][i]
                 # Parse stored JSON fields
-                if 'wiki_links' in metadata:
-                    metadata['wiki_links'] = json.loads(metadata['wiki_links'])
-                if 'external_refs' in metadata:
-                    metadata['external_refs'] = json.loads(metadata['external_refs'])
+                try:
+                    if 'wiki_links' in metadata and metadata['wiki_links']:
+                        metadata['wiki_links'] = json.loads(metadata['wiki_links'])
+                    if 'external_refs' in metadata and metadata['external_refs']:
+                        metadata['external_refs'] = json.loads(metadata['external_refs'])
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Error parsing JSON fields in metadata: {e}")
                     
                 similar_docs.append({
                     'chunk_id': results['ids'][0][i],
@@ -211,6 +215,7 @@ class VectorStoreService:
                     'similarity': similarity
                 })
 
+            logger.info(f"Returning {len(similar_docs)} results after filtering")
             return similar_docs
 
         except Exception as e:

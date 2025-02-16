@@ -101,10 +101,11 @@ def process_knowledge_base(cfg, cli_args):
                 doc_type=cli_args.note_type,
                 threshold=cfg.get('vector_store', {}).get('similarity_threshold', 0.85)
             )
-            if results:
-                _display_search_results(results)
-            else:
+            if not results:
                 logger.info("No matching results found")
+            else:
+                logger.info(f"Found {len(results)} matching results")
+                _display_search_results(results)
 
         elif cli_args.show_connections:
             note_path = os.path.expanduser(cli_args.show_connections)
