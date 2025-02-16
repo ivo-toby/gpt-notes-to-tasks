@@ -109,6 +109,12 @@ def setup_argparser() -> argparse.ArgumentParser:
         help="Display semantic structure of a note"
     )
     kb_parser.add_argument(
+        "--analyze-links",
+        type=str,
+        metavar="NOTE_PATH",
+        help="Analyze links and relationships for a note"
+    )
+    kb_parser.add_argument(
         "--note-type",
         type=str,
         choices=['daily', 'weekly', 'meeting', 'learning', 'note'],
