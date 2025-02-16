@@ -1,17 +1,56 @@
+"""
+Learning processing service.
+
+This module handles the extraction, processing and storage of learning entries
+from notes, including generating titles and tags using AI services.
+"""
+
 import os
 import re
+from typing import List, Tuple, Optional
+from services.openai_service import OpenAIService
 from utils.file_handler import load_notes, write_summary_to_file, create_output_dir
 
 
 class LearningService:
-    def __init__(self, learnings_file, learnings_output_dir):
+    """
+    Service for processing and managing learning entries.
+    
+    This service handles loading learning entries from files, processing them
+    with AI services to generate titles and tags, and saving them as individual
+    markdown files.
+    """
+
+    def __init__(self, learnings_file: str, learnings_output_dir: str):
+        """
+        Initialize the learning service.
+
+        Args:
+            learnings_file (str): Path to the file containing learning entries
+            learnings_output_dir (str): Directory to save processed learning files
+        """
         self.learnings_file = os.path.expanduser(learnings_file)
         self.learnings_output_dir = os.path.expanduser(learnings_output_dir)
 
-    def load_learnings(self):
+    def load_learnings(self) -> str:
+        """
+        Load learning entries from the configured file.
+
+        Returns:
+            str: Content of the learnings file
+        """
         return load_notes(self.learnings_file)
 
-    def identify_new_learnings(self, content):
+    def identify_new_learnings(self, content: str) -> List[Tuple[str, str, str]]:
+        """
+        Extract learning entries from content using regex.
+
+        Args:
+            content (str): Raw content containing learning entries
+
+        Returns:
+            List[Tuple[str, str, str]]: List of (full_match, timestamp, learning) tuples
+        """
         pattern = r"(\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [AP]M)\](.*?)(?=\n\[|\Z))"
         matches = re.findall(pattern, content, re.DOTALL)
         return [
@@ -19,7 +58,21 @@ class LearningService:
             for full_match, timestamp, learning in matches
         ]
 
-    def generate_markdown_file(self, timestamp, learning, title, tags):
+    def generate_markdown_file(
+        self, timestamp: str, learning: str, title: str, tags: List[str]
+    ) -> str:
+        """
+        Generate a markdown file for a learning entry.
+
+        Args:
+            timestamp (str): Timestamp of the learning entry
+            learning (str): Content of the learning
+            title (str): Generated title for the learning
+            tags (List[str]): List of relevant tags
+
+        Returns:
+            str: Name of the generated file
+        """
         clean_title = re.sub(r"[^\w\s-]", "", title.lower())
         clean_title = re.sub(r"[-\s]+", "_", clean_title).strip("-_")
         filename = f"{clean_title}.md"
@@ -33,7 +86,19 @@ class LearningService:
         write_summary_to_file(file_path, content)
         return filename
 
-    def process_new_learnings(self, openai_service):
+    def process_new_learnings(self, openai_service: OpenAIService) -> None:
+        """
+        Process all new learning entries.
+
+        Loads learnings, generates titles and tags using AI, saves them as
+        markdown files, and removes processed entries from the source file.
+
+        Args:
+            openai_service (OpenAIService): Service for AI-powered text generation
+
+        Returns:
+            None
+        """
         content = self.load_learnings()
         learnings = self.identify_new_learnings(content)
 
