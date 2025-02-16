@@ -200,6 +200,9 @@ Manage and query your semantic knowledge base:
 # Reindex all notes (with dry run)
 python main.py kb --reindex --dry-run
 
+# Update only modified notes (faster than full reindex)
+python main.py kb --update
+
 # Search for content
 python main.py kb --query "python async programming" --limit 10
 
@@ -241,6 +244,19 @@ You can set up cron jobs to run the script automatically:
 # Update knowledge base at midnight
 0 0 * * * /usr/bin/python3 /path/to/script.py kb --reindex
 ```
+
+## Knowledge Base Management
+
+The script maintains a semantic knowledge base of your notes using vector embeddings. You can:
+
+- Reindex all notes using `--reindex`
+- Update only modified notes using `--update` (faster than full reindex)
+- Search for similar content across all notes
+- View note connections and relationships
+- Find notes by tags or dates
+- Analyze note structure
+
+The `--update` command checks file modification times and only processes notes that have changed since they were last indexed, making it much faster than a full reindex.
 
 ## Future Improvements
 
