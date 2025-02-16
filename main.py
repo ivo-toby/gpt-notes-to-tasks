@@ -75,7 +75,9 @@ def process_knowledge_base(cfg, cli_args):
                         doc_type=note.get('type', 'note')
                     )
                     chunk_texts = [chunk['content'] for chunk in chunks]
+                    logger.info(f"Generating embeddings for {len(chunk_texts)} chunks...")
                     embeddings = embedding_service.embed_chunks(chunk_texts)
+                    logger.info("Embeddings generated successfully")
                     vector_store.add_document(
                         doc_id=note['id'],
                         chunks=chunk_texts,

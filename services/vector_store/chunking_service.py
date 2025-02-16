@@ -161,6 +161,7 @@ Return only the JSON array with no additional text."""
                             if key not in ["content", "title", "tags"]:
                                 chunk["metadata"][f"frontmatter_{key}"] = value
 
+                logger.info(f"Created {len(valid_chunks)} semantic chunks")
                 return valid_chunks
 
             except (json.JSONDecodeError, ValueError) as e:
@@ -227,6 +228,7 @@ Return only the JSON array with no additional text."""
             An instance of a chunking service
         """
         strategy = config.get("chunking_strategy", "semantic")
+        logger.info(f"Creating chunking service with strategy: {strategy}")
         if strategy == "paragraph":
             return ParagraphChunkingService(config)
         return ChunkingService(config)
@@ -270,7 +272,9 @@ class ParagraphChunkingService:
         if current_chunk:
             chunks.append("\n\n".join(current_chunk))
 
-        return [{"content": chunk, "metadata": {"doc_type": doc_type}} for chunk in chunks]
+        result = [{"content": chunk, "metadata": {"doc_type": doc_type}} for chunk in chunks]
+        logger.info(f"Created {len(result)} paragraph chunks")
+        return result
 
 
 
