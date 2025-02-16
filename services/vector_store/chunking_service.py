@@ -27,22 +27,6 @@ class ChunkingService:
         self.min_chunk_size = config.get("vector_store", {}).get("chunk_size_min", 50)
         self.max_chunk_size = config.get("vector_store", {}).get("chunk_size_max", 500)
 
-class ChunkingService:
-    """Manages the semantic chunking of documents."""
-
-    def __init__(self, config: Dict[str, Any]):
-        """
-        Initialize the chunking service.
-
-        Args:
-            config: Configuration dictionary containing API settings
-        """
-        self.config = config
-        openai.api_key = config["api_key"]
-        self.client = openai.OpenAI()
-        self.min_chunk_size = config.get("vector_store", {}).get("chunk_size_min", 50)
-        self.max_chunk_size = config.get("vector_store", {}).get("chunk_size_max", 500)
-
     @staticmethod
     def create(config: Dict[str, Any]) -> 'ChunkingService':
         """
@@ -99,6 +83,20 @@ class ParagraphChunkingService:
             chunks.append("\n\n".join(current_chunk))
 
         return [{"content": chunk, "metadata": {"doc_type": doc_type}} for chunk in chunks]
+
+
+    def chunk_document(self, content: str, doc_type: str = "note") -> List[Dict[str, Any]]:
+        """
+        Chunk a document into semantically coherent parts.
+
+        Args:
+            content: Content to chunk
+            doc_type: Type of document
+
+        Returns:
+            List of chunks with metadata
+        """
+        return self._process_chunk_group(content, doc_type=doc_type)
 
     def _process_chunk_group(
         self,
@@ -275,17 +273,3 @@ Return only the JSON array with no additional text."""
 
         return list(dates)
 
-    def chunk_document(
-        self, content: str, doc_type: str = "note"
-    ) -> List[Dict[str, Any]]:
-        """
-        Chunk a document into semantically coherent parts.
-
-        Args:
-            content: Content to chunk
-            doc_type: Type of document
-
-        Returns:
-            List of chunks with metadata
-        """
-        return self._process_chunk_group(content, doc_type=doc_type)
