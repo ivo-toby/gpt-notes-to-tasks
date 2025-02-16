@@ -36,6 +36,14 @@ File system for note content (Obsidian vault)
 B. Configuration (extend existing config.yaml):
 yamlCopyknowledge_base:
 vector_store_path: "~/Documents/notes/.vector_store"
+chunking_strategy: "semantic"  # or "paragraph"
+chunking_config:
+  semantic:
+    min_size: 50
+    max_size: 500
+  paragraph:
+    max_length: 500
+    overlap: 50
 email_settings:
 imap_server: "imap.example.com"
 folders: ["INBOX", "Archive"]
