@@ -149,7 +149,7 @@ class VectorStoreService:
             self.metadata_collection.upsert(
                 ids=[doc_id],
                 metadatas=[{'modified_time': metadata['modified_time']}],
-                embeddings=[[1.0] * 384],  # Dummy embedding for metadata tracking
+                embeddings=[[1.0] * 1536],  # Dummy embedding for metadata tracking (OpenAI dimension)
                 documents=[""]  # Empty document as it's just for tracking
             )
             
@@ -235,7 +235,7 @@ class VectorStoreService:
         """
         # Query the links collection
         results = self.collections['links'].query(
-            query_embeddings=[[1.0] * 384],  # Dummy embedding for exact match
+            query_embeddings=[[1.0] * 1536],  # Dummy embedding for exact match (OpenAI dimension)
             where={"source_id": doc_id},
             include=["metadatas"]
         )
@@ -420,7 +420,7 @@ class VectorStoreService:
                 link_id = f"{doc_id}_to_{link['target']}"
                 self.collections['links'].add(
                     ids=[link_id],
-                    embeddings=[[1.0] * 384],  # Dummy embedding for exact match
+                    embeddings=[[1.0] * 1536],  # Dummy embedding for exact match (OpenAI dimension)
                     documents=[""],  # No need to store text
                     metadatas=[{
                         'source_id': doc_id,
