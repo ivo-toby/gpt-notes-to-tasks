@@ -19,7 +19,7 @@ from utils.date_utils import get_date_str
 from utils.file_handler import create_output_dir, write_summary_to_file
 
 
-def process_daily_notes(config, args):
+def process_daily_notes(cfg, cli_args):
     """
     Process daily notes to generate summaries and extract tasks.
 
@@ -30,11 +30,11 @@ def process_daily_notes(config, args):
     Returns:
         None
     """
-    notes_service = NotesService(config["daily_notes_file"])
-    openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
+    notes_service = NotesService(cfg["daily_notes_file"])
+    openai_service = OpenAIService(api_key=cfg["api_key"], model=cfg["model"])
 
     notes = notes_service.load_notes()
-    today_notes = notes_service.extract_today_notes(notes, args.date)
+    today_notes = notes_service.extract_today_notes(notes, cli_args.date)
 
     if not today_notes:
         print("No notes found for today.")
@@ -46,16 +46,16 @@ def process_daily_notes(config, args):
 
     display_results(summary, tasks, tags)
 
-    if not args.dry_run:
-        if not args.skip_reminders:
+    if not cli_args.dry_run:
+        if not cli_args.skip_reminders:
             add_tasks_to_reminders(tasks)
 
         write_daily_summary(
-            config, summary, tasks, tags, today_notes, args.replace_summary, args.date
+            cfg, summary, tasks, tags, today_notes, cli_args.replace_summary, cli_args.date
         )
 
 
-def process_weekly_notes(config, args):
+def process_weekly_notes(cfg, cli_args):
     """
     Process and generate weekly note summaries.
 
