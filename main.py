@@ -56,6 +56,16 @@ def process_daily_notes(config, args):
 
 
 def process_weekly_notes(config, args):
+    """
+    Process and generate weekly note summaries.
+
+    Args:
+        config (dict): Application configuration dictionary
+        args (Namespace): Command line arguments
+
+    Returns:
+        None
+    """
     notes_service = NotesService(config["daily_notes_file"])
     openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
 
@@ -80,6 +90,16 @@ def process_weekly_notes(config, args):
 
 
 def process_meeting_notes(config, args):
+    """
+    Process daily notes to generate structured meeting notes.
+
+    Args:
+        config (dict): Application configuration dictionary
+        args (Namespace): Command line arguments
+
+    Returns:
+        None
+    """
     notes_service = NotesService(config["daily_notes_file"])
     openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
 
@@ -100,6 +120,17 @@ def process_meeting_notes(config, args):
 
 
 def display_results(summary, tasks, tags):
+    """
+    Display the processed results to the console.
+
+    Args:
+        summary (str): Generated summary text
+        tasks (list): List of action items/tasks
+        tags (list): List of relevant tags
+
+    Returns:
+        None
+    """
     print("Summary:")
     print(summary)
     print("Tags:")
@@ -110,6 +141,15 @@ def display_results(summary, tasks, tags):
 
 
 def add_tasks_to_reminders(tasks):
+    """
+    Add identified tasks to the system reminders.
+
+    Args:
+        tasks (list): List of tasks to be added to reminders
+
+    Returns:
+        None
+    """
     for task in tasks:
         ReminderService.add_to_reminders(task)
 
@@ -257,7 +297,7 @@ def save_meeting_notes(meeting_data, output_dir="MeetingNotes"):
     output_file = os.path.join(output_dir, f"{file_name}.md")
 
     os.makedirs(output_dir, exist_ok=True)
-    with open(output_file, "w") as file:
+    with open(output_file, "w", encoding="utf-8") as file:
         file.write(meeting_notes_content)
 
 
