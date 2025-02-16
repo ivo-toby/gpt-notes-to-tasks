@@ -1,14 +1,14 @@
 import argparse
-from datetime import datetime, timedelta
 import os
-from utils.config_loader import load_config
-from utils.file_handler import create_output_dir, load_notes, write_summary_to_file
-from utils.date_utils import get_date_str, get_week_range
+from datetime import datetime, timedelta
+
+from services.learning_service import LearningService
 from services.notes_service import NotesService
 from services.openai_service import OpenAIService
 from services.reminder_service import ReminderService
-
-from services.learning_service import LearningService
+from utils.config_loader import load_config
+from utils.date_utils import get_date_str
+from utils.file_handler import create_output_dir, write_summary_to_file
 
 
 def process_daily_notes(config, args):
@@ -57,6 +57,7 @@ def process_weekly_notes(config, args):
             weekly_summary,
             weekly_notes,
             args.replace_summary,
+            date_str=args.date,  # Ensure date_str is passed here
         )
 
 
@@ -151,6 +152,13 @@ def write_weekly_summary(
     # Get ISO year and week number
     iso_year, iso_week, _ = start_date.isocalendar()
     week_identifier = f"{iso_year}-W{iso_week:02d}"
+
+    # Debug prints
+    print(f"DEBUG: start_date = {start_date}")
+    print(f"DEBUG: end_date = {end_date}")
+    print(f"DEBUG: iso_year = {iso_year}")
+    print(f"DEBUG: iso_week = {iso_week}")
+    print(f"DEBUG: week_identifier = {week_identifier}")
 
     # Prepare the output file path
     output_dir = create_output_dir(
