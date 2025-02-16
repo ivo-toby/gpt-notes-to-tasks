@@ -6,9 +6,9 @@ handling various text generation tasks including summarization,
 meeting notes extraction, and learning processing.
 """
 
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
+
 from openai import OpenAI
-from openai.types.chat import ChatCompletion
 
 
 class OpenAIService:
@@ -69,10 +69,10 @@ class OpenAIService:
         return [tag.strip() for tag in response.choices[0].message.content.split(",")]
 
     def chat_completion_with_function(
-        self, 
-        messages: List[Dict[str, str]], 
-        functions: List[Dict[str, Any]], 
-        function_call: Dict[str, str]
+        self,
+        messages: List[Dict[str, str]],
+        functions: List[Dict[str, Any]],
+        function_call: Dict[str, str],
     ) -> Optional[Any]:
         """
         Make a chat completion request with function calling.
@@ -101,7 +101,9 @@ class OpenAIService:
             print(f"An error occurred during API call: {e}")
             return None
 
-    def summarize_notes_and_identify_tasks(self, notes: str) -> Optional[Dict[str, Any]]:
+    def summarize_notes_and_identify_tasks(
+        self, notes: str
+    ) -> Optional[Dict[str, Any]]:
         """
         Summarize notes and extract tasks using AI.
 
@@ -223,7 +225,9 @@ class OpenAIService:
             print(f"An error occurred: {e}")
             return None
 
-    def generate_meeting_notes(self, notes: str) -> Optional[Dict[str, List[Dict[str, Any]]]]:
+    def generate_meeting_notes(
+        self, notes: str
+    ) -> Optional[Dict[str, List[Dict[str, Any]]]]:
         """
         Extract and format meeting notes from general notes using AI.
 
