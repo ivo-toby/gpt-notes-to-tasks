@@ -192,26 +192,30 @@ class VectorStoreService:
 
             # Format results
             similar_docs = []
-        for i in range(len(results['ids'][0])):
-            similarity = 1 - results['distances'][0][i]  # Convert distance to similarity
-            if threshold and similarity < threshold:
-                continue
-            
-            metadata = results['metadatas'][0][i]
-            # Parse stored JSON fields
-            if 'wiki_links' in metadata:
-                metadata['wiki_links'] = json.loads(metadata['wiki_links'])
-            if 'external_refs' in metadata:
-                metadata['external_refs'] = json.loads(metadata['external_refs'])
+            for i in range(len(results['ids'][0])):
+                similarity = 1 - results['distances'][0][i]  # Convert distance to similarity
+                if threshold and similarity < threshold:
+                    continue
                 
-            similar_docs.append({
-                'chunk_id': results['ids'][0][i],
-                'content': results['documents'][0][i],
-                'metadata': metadata,
-                'similarity': similarity
-            })
+                metadata = results['metadatas'][0][i]
+                # Parse stored JSON fields
+                if 'wiki_links' in metadata:
+                    metadata['wiki_links'] = json.loads(metadata['wiki_links'])
+                if 'external_refs' in metadata:
+                    metadata['external_refs'] = json.loads(metadata['external_refs'])
+                    
+                similar_docs.append({
+                    'chunk_id': results['ids'][0][i],
+                    'content': results['documents'][0][i],
+                    'metadata': metadata,
+                    'similarity': similarity
+                })
 
-        return similar_docs
+            return similar_docs
+
+        except Exception as e:
+            logger.error(f"Error finding similar documents: {str(e)}")
+            return []
 
     def find_connected_notes(self, doc_id: str) -> List[Dict[str, Any]]:
         """
