@@ -67,13 +67,14 @@ class VectorStoreService:
         
         for i, chunk in enumerate(chunks):
             chunk_id = f"{doc_id}_chunk_{i}"
+            # Ensure all metadata values are valid types
             chunk_meta = {
                 "doc_id": doc_id,
                 "chunk_index": i,
                 "doc_type": metadata.get('type', 'note'),
                 "source_path": metadata.get('source', ''),
-                "date": metadata.get('date', ''),
-                "filename": metadata.get('filename', '')
+                "date": metadata.get('date', '') or '',
+                "filename": metadata.get('filename', '') or ''
             }
             
             # Extract links if present in the chunk
