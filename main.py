@@ -9,6 +9,7 @@ generate summaries, extract tasks, and manage reminders.
 from services.learning_service import LearningService
 from services.summary_service import SummaryService
 from services.meeting_service import MeetingService
+from services.openai_service import OpenAIService
 from utils.config_loader import load_config
 from utils.cli import setup_argparser
 
@@ -70,6 +71,23 @@ def process_meeting_notes(cfg, cli_args):
     )
 
 
+def process_new_learnings(cfg, cli_args):
+    """
+    Process and extract new learnings from notes.
+
+    Args:
+        cfg (dict): Application configuration dictionary
+        cli_args (Namespace): Command line arguments
+
+    Returns:
+        None
+    """
+    learning_service = LearningService(
+        cfg["learnings_file"], cfg["learnings_output_dir"]
+    )
+    learning_service.process_new_learnings(
+        OpenAIService(api_key=cfg["api_key"], model=cfg["model"])
+    )
 
 
 if __name__ == "__main__":
