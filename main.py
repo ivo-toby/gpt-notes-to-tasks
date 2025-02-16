@@ -94,14 +94,14 @@ if __name__ == "__main__":
     parser = setup_argparser()
     args = parser.parse_args()
 
-    config = load_config(args.config)
+    cfg = load_config(args.config)
     if args.process_learnings:
-        process_new_learnings(config, args)
+        process_new_learnings(cfg, args)
     elif args.meetingnotes:
-        process_meeting_notes(config, args)
+        process_meeting_notes(cfg, args)
     elif args.weekly:
-        process_weekly_notes(config, args)
+        process_weekly_notes(cfg, args)
     else:
-        process_daily_notes(config, args)
-        process_meeting_notes(config, args)
-        process_new_learnings(config, args)
+        process_daily_notes(cfg, args)
+        process_meeting_notes(cfg, args)
+        process_new_learnings(cfg, args)

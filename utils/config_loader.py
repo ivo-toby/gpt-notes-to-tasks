@@ -8,7 +8,7 @@ import yaml
 from yaml.parser import ParserError
 
 
-def load_config(config_file):
+def load_config(config_file: str) -> dict:
     """
     Load and parse a YAML configuration file.
 
