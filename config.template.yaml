@@ -27,12 +27,8 @@ vector_store:
   chunk_size_max: 500  # Maximum characters per chunk
   similarity_threshold: 0.85  # Minimum similarity score for matches
 
-# Chunking strategy configuration
-chunking_strategy: "semantic"  # Options: "semantic" or "paragraph"
+# Chunking configuration
 chunking_config:
-  semantic:
-    min_size: 50    # Minimum characters per chunk
-    max_size: 500   # Maximum characters per chunk
-  paragraph:
-    max_length: 500  # Maximum length of paragraph chunks
-    overlap: 50      # Number of characters to overlap between chunks
+  recursive:
+    chunk_size: 500    # Maximum characters per chunk
+    chunk_overlap: 50  # Number of characters to overlap between chunks
