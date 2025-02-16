@@ -63,6 +63,7 @@ def process_knowledge_base(cfg, cli_args):
         embedding_service = EmbeddingService(cfg)
         chunking_service = ChunkingService(cfg)
         summary_service = SummaryService(cfg)
+        link_service = LinkService(vector_store)
 
         if cli_args.reindex:
             logger.info("Reindexing all notes...")
@@ -139,6 +140,12 @@ def process_knowledge_base(cfg, cli_args):
             except ValueError:
                 logger.error("Invalid date format. Please use YYYY-MM-DD")
 
+        elif cli_args.analyze_links:
+            note_path = os.path.expanduser(cli_args.analyze_links)
+            logger.info(f"Analyzing links for: {note_path}")
+            analysis = link_service.analyze_relationships(note_path)
+            _display_link_analysis(note_path, analysis)
+
         elif cli_args.note_structure:
             note_path = os.path.expanduser(cli_args.note_structure)
             try:
@@ -190,6 +197,35 @@ def _display_connections_graph(note_path, connections):
         print(f"    {source_id} -->|{conn['relationship']}| {target_id}[{os.path.basename(conn['target_id'])}]")
     
     print("```")
+
+def _display_link_analysis(note_path: str, analysis: Dict[str, Any]) -> None:
+    """Display link analysis results."""
+    print(f"\nLink Analysis for {note_path}:")
+    
+    print("\nDirect Links:")
+    for link in analysis['direct_links']:
+        print(f"- {link['target_id']} ({link['relationship']})")
+        if link.get('context'):
+            print(f"  Context: {link['context'][:100]}...")
+
+    print("\nBacklinks:")
+    for link in analysis['backlinks']:
+        print(f"- {link['source_id']} ({link['relationship']})")
+        if link.get('context'):
+            print(f"  Context: {link['context'][:100]}...")
+
+    print("\nSemantic Relationships:")
+    for link in analysis['semantic_links']:
+        print(f"- {link['metadata'].get('doc_id', 'Unknown')} "
+              f"(similarity: {link['similarity']:.2f})")
+        print(f"  Preview: {link['content'][:100]}...")
+
+    print("\nSuggested Connections:")
+    for suggestion in analysis['suggested_links']:
+        print(f"- {suggestion['note_id']} "
+              f"(similarity: {suggestion['similarity']:.2f})")
+        print(f"  Reason: {suggestion['reason']}")
+        print(f"  Preview: {suggestion['preview']}")
 
 def _display_note_structure(chunks):
     """Display semantic structure of a note."""
