@@ -93,14 +93,18 @@ def process_knowledge_base(cfg, cli_args):
 
         elif cli_args.query:
             # Search for similar content
+            logger.info(f"Searching for: {cli_args.query}")
             query_embedding = embedding_service.embed_text(cli_args.query)
             results = vector_store.find_similar(
                 query_embedding=query_embedding,
                 limit=cli_args.limit,
                 doc_type=cli_args.note_type,
-                threshold=cfg['vector_store'].get('similarity_threshold', 0.85)
+                threshold=cfg.get('vector_store', {}).get('similarity_threshold', 0.85)
             )
-            _display_search_results(results)
+            if results:
+                _display_search_results(results)
+            else:
+                logger.info("No matching results found")
 
         elif cli_args.show_connections:
             note_path = os.path.expanduser(cli_args.show_connections)

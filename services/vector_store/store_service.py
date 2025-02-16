@@ -38,20 +38,25 @@ class VectorStoreService:
         )
         
         # Create collections for different types of content
-        self.collections = {
-            'notes': self.client.get_or_create_collection(
-                name="notes",
-                metadata={"description": "General notes and their chunks"}
-            ),
-            'links': self.client.get_or_create_collection(
-                name="links",
-                metadata={"description": "Link relationships between notes"}
-            ),
-            'references': self.client.get_or_create_collection(
-                name="references",
-                metadata={"description": "External references and citations"}
-            )
-        }
+        try:
+            self.collections = {
+                'notes': self.client.get_or_create_collection(
+                    name="notes",
+                    metadata={"description": "General notes and their chunks"}
+                ),
+                'links': self.client.get_or_create_collection(
+                    name="links",
+                    metadata={"description": "Link relationships between notes"}
+                ),
+                'references': self.client.get_or_create_collection(
+                    name="references",
+                    metadata={"description": "External references and citations"}
+                )
+            }
+            logger.info("Vector store collections initialized successfully")
+        except Exception as e:
+            logger.error(f"Error initializing vector store collections: {str(e)}")
+            raise
 
     def needs_update(self, doc_id: str, modified_time: float) -> bool:
         """
@@ -165,15 +170,25 @@ class VectorStoreService:
         Returns:
             List of similar documents with their metadata
         """
-        # Prepare where clause if doc_type is specified
-        where = {"doc_type": doc_type} if doc_type else None
-        
-        results = self.collections['notes'].query(
-            query_embeddings=[query_embedding],
-            n_results=limit,
-            where=where,
-            include=["documents", "metadatas", "distances"]
-        )
+        try:
+            # Prepare where clause if doc_type is specified
+            where = {"doc_type": doc_type} if doc_type else None
+            
+            logger.info(f"Searching for similar documents with limit={limit}" + 
+                       (f", doc_type={doc_type}" if doc_type else ""))
+            
+            results = self.collections['notes'].query(
+                query_embeddings=[query_embedding],
+                n_results=limit,
+                where=where,
+                include=["documents", "metadatas", "distances"]
+            )
+
+            if not results['ids'][0]:
+                logger.info("No matching documents found")
+                return []
+
+            logger.info(f"Found {len(results['ids'][0])} matching documents")
 
         # Format results
         similar_docs = []
