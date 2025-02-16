@@ -11,7 +11,60 @@ import openai
 logger = logging.getLogger(__name__)
 
 
-class ChunkingService:
+class ParagraphChunkingService:
+    """Manages paragraph-based chunking of documents."""
+
+    @staticmethod
+    def create(config: Dict[str, Any]) -> 'ChunkingService':
+        """
+        Factory method to create a chunking service based on configuration.
+
+        Args:
+            config: Configuration dictionary
+
+        Returns:
+            An instance of a chunking service
+        """
+        strategy = config.get("chunking_strategy", "semantic")
+        if strategy == "paragraph":
+            return ParagraphChunkingService(config)
+        return ChunkingService(config)
+        """
+        Initialize the paragraph chunking service.
+
+        Args:
+            config: Configuration dictionary containing chunking settings
+        """
+        self.config = config
+        self.max_length = config.get("paragraph_chunking", {}).get("max_length", 500)
+        self.overlap = config.get("paragraph_chunking", {}).get("overlap", 50)
+
+    def chunk_document(self, content: str, doc_type: str = "note") -> List[Dict[str, Any]]:
+        """
+        Chunk a document into paragraphs with overlap.
+
+        Args:
+            content: Content to chunk
+            doc_type: Type of document
+
+        Returns:
+            List of chunks with metadata
+        """
+        paragraphs = content.split("\n\n")
+        chunks = []
+        current_chunk = []
+
+        for paragraph in paragraphs:
+            if len(" ".join(current_chunk + [paragraph])) <= self.max_length:
+                current_chunk.append(paragraph)
+            else:
+                chunks.append("\n\n".join(current_chunk))
+                current_chunk = current_chunk[-self.overlap:] + [paragraph]
+
+        if current_chunk:
+            chunks.append("\n\n".join(current_chunk))
+
+        return [{"content": chunk, "metadata": {"doc_type": doc_type}} for chunk in chunks]
     """Manages the semantic chunking of documents."""
 
     def __init__(self, config: Dict[str, Any]):
