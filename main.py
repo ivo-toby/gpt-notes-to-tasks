@@ -66,11 +66,11 @@ def process_weekly_notes(cfg, cli_args):
     Returns:
         None
     """
-    notes_service = NotesService(config["daily_notes_file"])
-    openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
+    notes_service = NotesService(cfg["daily_notes_file"])
+    openai_service = OpenAIService(api_key=cfg["api_key"], model=cfg["model"])
 
     notes = notes_service.load_notes()
-    weekly_notes = notes_service.extract_weekly_notes(notes, args.date)
+    weekly_notes = notes_service.extract_weekly_notes(notes, cli_args.date)
     if not weekly_notes:
         print("No notes found for the past week.")
         return
@@ -79,13 +79,13 @@ def process_weekly_notes(cfg, cli_args):
 
     display_results(weekly_summary, "", "")
 
-    if not args.dry_run:
+    if not cli_args.dry_run:
         write_weekly_summary(
-            config,
+            cfg,
             weekly_summary,
             weekly_notes,
-            args.replace_summary,
-            date_str=args.date,  # Ensure date_str is passed here
+            cli_args.replace_summary,
+            date_str=cli_args.date,
         )
 
 
@@ -100,20 +100,20 @@ def process_meeting_notes(config, args):
     Returns:
         None
     """
-    notes_service = NotesService(config["daily_notes_file"])
-    openai_service = OpenAIService(api_key=config["api_key"], model=config["model"])
+    notes_service = NotesService(cfg["daily_notes_file"])
+    openai_service = OpenAIService(api_key=cfg["api_key"], model=cfg["model"])
 
     notes = notes_service.load_notes()
-    today_notes = notes_service.extract_today_notes(notes, args.date)
+    today_notes = notes_service.extract_today_notes(notes, cli_args.date)
 
     if not today_notes:
         print("No notes found for today.")
         return
 
     meeting_notes = openai_service.generate_meeting_notes(today_notes)
-    if not args.dry_run:
-        for meeting in meeting_notes["meetings"]:
-            save_meeting_notes(meeting, config["meeting_notes_output_dir"])
+    if not cli_args.dry_run:
+        for meeting in meeting_notes.get("meetings", []):
+            save_meeting_notes(meeting, cfg["meeting_notes_output_dir"])
     else:
         for meeting in meeting_notes["meetings"]:
             print(meeting)
@@ -256,7 +256,7 @@ def write_weekly_summary(
         content = create_weekly_summary_content(weekly_summary, weekly_notes)
     else:
         # Append weekly summary to existing file's content
-        with open(output_file, "r") as file:
+        with open(output_file, "r", encoding="utf-8") as file:
             existing_content = file.read()
         additional_content = create_weekly_summary_content(weekly_summary, weekly_notes)
         content = existing_content + "\n\n" + additional_content
