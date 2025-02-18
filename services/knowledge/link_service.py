@@ -111,27 +111,110 @@ class LinkService:
 
         return suggestions
 
-    def update_obsidian_links(self, note_id: str, links: List[Dict[str, Any]]) -> None:
+    def update_obsidian_links(self, note_id: str, links: List[Dict[str, Any]], 
+                             update_backlinks: bool = True) -> None:
         """
         Update Obsidian-style wiki links in a note.
 
         Args:
             note_id: ID of the note to update
             links: List of links to add/update
+            update_backlinks: Whether to update backlinks in target notes
         """
-        # Get note content
         note_content = self.vector_store.get_note_content(note_id)
         if not note_content:
+            logger.warning(f"Note not found: {note_id}")
             return
 
         content = note_content["content"]
+        updated = False
 
-        # Add new wiki links
+        # Process each link
         for link in links:
             if link.get("add_wiki_link"):
                 target = link["target_id"]
-                alias = link.get("alias", target)
-                content += f"\n[[{target}|{alias}]]"
+                alias = link.get("alias", self._generate_alias(target))
+                new_link = f"[[{target}|{alias}]]"
+                
+                # Check if link already exists
+                if not self._has_wiki_link(content, target):
+                    # Add link in a semantically appropriate location
+                    content = self._insert_wiki_link(content, new_link)
+                    updated = True
+                    
+                    # Update backlinks in target note if requested
+                    if update_backlinks:
+                        self._update_target_backlinks(target, note_id)
 
-        # Update the note in the vector store
-        self.vector_store.update_document(doc_id=note_id, content=content)
+            elif link.get("remove_wiki_link"):
+                # Remove existing link
+                content = self._remove_wiki_link(content, link["target_id"])
+                updated = True
+
+        if updated:
+            # Update the note content
+            chunks = self._rechunk_content(content)
+            embeddings = self._generate_embeddings(chunks)
+            self.vector_store.update_document(
+                doc_id=note_id,
+                new_chunks=chunks,
+                new_embeddings=embeddings
+            )
+            logger.info(f"Updated links in note: {note_id}")
+
+    def _generate_alias(self, target: str) -> str:
+        """Generate a readable alias from the target ID."""
+        # Remove file extension and path
+        alias = os.path.basename(target).replace('.md', '')
+        # Convert kebab/snake case to title case
+        alias = ' '.join(word.capitalize() for word in re.split(r'[-_]', alias))
+        return alias
+
+    def _has_wiki_link(self, content: str, target: str) -> bool:
+        """Check if content already contains a wiki link to target."""
+        pattern = rf"\[\[{re.escape(target)}(?:\|[^\]]+)?\]\]"
+        return bool(re.search(pattern, content))
+
+    def _insert_wiki_link(self, content: str, new_link: str) -> str:
+        """Insert a wiki link in a semantically appropriate location."""
+        # Try to find a "Related" or "Links" section
+        sections = ["## Related", "## Links", "## References"]
+        for section in sections:
+            if section in content:
+                # Insert after section header
+                parts = content.split(section, 1)
+                return f"{parts[0]}{section}\n{new_link}\n{parts[1]}"
+        
+        # If no appropriate section found, add to end with header
+        return f"{content.rstrip()}\n\n## Related\n{new_link}\n"
+
+    def _remove_wiki_link(self, content: str, target: str) -> str:
+        """Remove a wiki link from the content."""
+        pattern = rf"\[\[{re.escape(target)}(?:\|[^\]]+)?\]\]\n?"
+        return re.sub(pattern, '', content)
+
+    def _update_target_backlinks(self, target_id: str, source_id: str) -> None:
+        """Update backlinks section in the target note."""
+        target_content = self.vector_store.get_note_content(target_id)
+        if not target_content:
+            return
+
+        content = target_content["content"]
+        backlink = f"[[{source_id}]]"
+        
+        # Find or create backlinks section
+        if "## Backlinks" not in content:
+            content += f"\n\n## Backlinks\n{backlink}\n"
+        else:
+            # Add to existing backlinks section if not already present
+            if backlink not in content:
+                content = content.replace("## Backlinks\n", f"## Backlinks\n{backlink}\n")
+
+        # Update target note
+        chunks = self._rechunk_content(content)
+        embeddings = self._generate_embeddings(chunks)
+        self.vector_store.update_document(
+            doc_id=target_id,
+            new_chunks=chunks,
+            new_embeddings=embeddings
+        )
