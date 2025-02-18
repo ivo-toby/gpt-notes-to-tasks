@@ -59,11 +59,14 @@ class LinkService:
         else:
             semantic_links = []
 
+        # Get backlinks
+        backlinks = self._find_backlinks(note_id)
+
         return {
             "direct_links": direct_links,
             "semantic_links": semantic_links,
-            "backlinks": self._find_backlinks(note_id),
-            "suggested_links": self._suggest_connections(note_id),
+            "backlinks": backlinks,
+            "suggested_links": self._suggest_connections(note_id, direct_links, backlinks),
         }
 
     def _find_backlinks(self, note_id: str) -> List[Dict[str, Any]]:
@@ -78,12 +81,16 @@ class LinkService:
         """
         return self.vector_store.find_backlinks(note_id)
 
-    def _suggest_connections(self, note_id: str) -> List[Dict[str, Any]]:
+    def _suggest_connections(
+        self, note_id: str, existing_links: List[Dict[str, Any]] = None, backlinks: List[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
         """
         Suggest potential connections based on content similarity.
 
         Args:
             note_id: ID of the note to find suggestions for
+            existing_links: Optional list of existing direct links to avoid duplicate calls
+            backlinks: Optional list of backlinks to avoid duplicate calls
 
         Returns:
             List of suggested connections
@@ -105,8 +112,8 @@ class LinkService:
 
         # Get existing connections including backlinks
         existing = set()
-        direct_links = self.vector_store.find_connected_notes(note_id)
-        backlinks = self.vector_store.find_backlinks(note_id)
+        direct_links = existing_links or self.vector_store.find_connected_notes(note_id)
+        backlinks = backlinks or self.vector_store.find_backlinks(note_id)
 
         # Add both direct links and backlinks to existing set
         existing.update(link["target_id"] for link in direct_links)
@@ -153,6 +160,10 @@ class LinkService:
             note_path: Full path to the note file
             links: List of links to add/update
             update_backlinks: Whether to update backlinks in target notes
+
+        Raises:
+            FileNotFoundError: If the note file does not exist
+            IOError: If there is an error reading or writing the file
         """
         # Ensure we have the full path
         note_path = os.path.expanduser(note_path)
@@ -175,9 +186,13 @@ class LinkService:
             else:
                 main_content = original_content
                 links_section = ""
+        except FileNotFoundError as e:
+            logger.error(f"Error reading file {note_path}: {str(e)}")
+            raise  # Re-raise the FileNotFoundError
         except IOError as e:
             logger.error(f"Error reading file {note_path}: {str(e)}")
-            return
+            raise
+
         """
         Update Obsidian-style wiki links in a note.
 
@@ -329,43 +344,38 @@ class LinkService:
     def _update_target_backlinks(
         self, target_id: str, source_id: str, source_path: str
     ) -> None:
-        """Update backlinks section in the target note."""
-        target_content = self.vector_store.get_note_content(target_id)
-        if not target_content:
+        """
+        Update backlinks in a target note.
+
+        Args:
+            target_id: ID of the target note
+            source_id: ID of the source note
+            source_path: Path to the source note
+        """
+        # Get target note content
+        note_content = self.vector_store.get_note_content(target_id)
+        if not note_content:
+            logger.warning(f"Could not get content for note: {target_id}")
             return
 
-        content = target_content["content"]
-        backlink = f"[[{source_id}]]"
-
-        # Find or create backlinks section
-        if "## Backlinks" not in content:
-            content += f"\n\n## Backlinks\n{backlink}\n"
-        else:
-            # Add to existing backlinks section if not already present
-            if backlink not in content:
-                content = content.replace(
-                    "## Backlinks\n", f"## Backlinks\n{backlink}\n"
-                )
-
+        # Read the current content
         try:
-            # Get full path for target note using base path
-            target_path = os.path.join(self.base_path, target_id)
-
-            # Write changes to the target file
-            with open(target_path, "w") as f:
-                f.write(content)
-            logger.info(f"Updated backlinks in file: {target_path}")
-
-            # Update target note in vector store
-            chunks = self.vector_store.chunking_service.chunk_document(
-                content, doc_type="note"
-            )
-            chunk_texts = [chunk["content"] for chunk in chunks]
-            embeddings = self.vector_store.embedding_service.embed_chunks(chunk_texts)
-            self.vector_store.update_document(
-                doc_id=target_id, new_chunks=chunk_texts, new_embeddings=embeddings
-            )
-            logger.info(f"Updated vector store for target: {target_id}")
+            with open(source_path, "r") as f:
+                content = f.read()
         except IOError as e:
-            logger.error(f"Error writing to target file {target_path}: {str(e)}")
-            raise
+            logger.error(f"Error reading file {source_path}: {str(e)}")
+            return
+
+        # Add backlink if it doesn't exist
+        if f"[[{source_id}]]" not in content:
+            # Add backlink at the end of the file
+            if not content.endswith("\n"):
+                content += "\n"
+            content += f"\n[[{source_id}]]\n"
+
+            # Write updated content
+            try:
+                with open(source_path, "w") as f:
+                    f.write(content)
+            except IOError as e:
+                logger.error(f"Error writing file {source_path}: {str(e)}")
