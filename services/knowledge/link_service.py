@@ -205,9 +205,38 @@ class LinkService:
         return alias
 
     def _has_wiki_link(self, content: str, target: str) -> bool:
-        """Check if content already contains a wiki link to target."""
-        pattern = rf"\[\[{re.escape(target)}(?:\|[^\]]+)?\]\]"
-        return bool(re.search(pattern, content))
+        """
+        Check if content already contains a wiki link to target.
+        
+        Args:
+            content: The note content to check
+            target: The target note ID to look for
+            
+        Returns:
+            bool: True if the link already exists
+        """
+        # Check for exact wiki link match
+        exact_pattern = rf"\[\[{re.escape(target)}(?:\|[^\]]+)?\]\]"
+        if re.search(exact_pattern, content):
+            logger.debug(f"Found exact wiki link match for {target}")
+            return True
+            
+        # Check for link in any section
+        sections = ["## Related", "## Links", "## References", "## Backlinks"]
+        for section in sections:
+            if section in content:
+                section_content = content.split(section, 1)[1].split("\n\n")[0]
+                if target in section_content:
+                    logger.debug(f"Found {target} in {section} section")
+                    return True
+                    
+        # Check for any mention of the target file name
+        base_name = os.path.basename(target).replace('.md', '')
+        if f"[[{base_name}" in content:
+            logger.debug(f"Found mention of {base_name} in content")
+            return True
+            
+        return False
 
     def _insert_wiki_link(self, content: str, new_link: str) -> str:
         """Insert a wiki link in a semantically appropriate location."""
