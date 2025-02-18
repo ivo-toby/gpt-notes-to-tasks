@@ -2,10 +2,11 @@
 
 import logging
 import os
-from typing import List, Dict, Any, Optional
 import re
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
+
 
 class LinkService:
     """Manages link relationships and suggestions between notes."""
@@ -33,30 +34,28 @@ class LinkService:
         base_path = "~/workspace/rd/cf-notes/"
         expanded_base = os.path.expanduser(base_path)
         if note_id.startswith(expanded_base):
-            note_id = note_id[len(expanded_base):]
+            note_id = note_id[len(expanded_base) :]
         logger.info(f"Starting relationship analysis for note: {note_id}")
-        
+
         # Get existing connections
         direct_links = self.vector_store.find_connected_notes(note_id)
         logger.info(f"Found {len(direct_links)} direct links")
-        
+
         # Find semantic relationships
         note_content = self.vector_store.get_note_content(note_id)
         logger.info(f"Retrieved note content: {'Yes' if note_content else 'No'}")
         if note_content:
             semantic_links = self.vector_store.find_similar(
-                query_embedding=note_content['embedding'],
-                limit=5,
-                threshold=0.6
+                query_embedding=note_content["embedding"], limit=5, threshold=0.6
             )
         else:
             semantic_links = []
 
         return {
-            'direct_links': direct_links,
-            'semantic_links': semantic_links,
-            'backlinks': self._find_backlinks(note_id),
-            'suggested_links': self._suggest_connections(note_id)
+            "direct_links": direct_links,
+            "semantic_links": semantic_links,
+            "backlinks": self._find_backlinks(note_id),
+            "suggested_links": self._suggest_connections(note_id),
         }
 
     def _find_backlinks(self, note_id: str) -> List[Dict[str, Any]]:
@@ -88,24 +87,27 @@ class LinkService:
 
         # Find similar content
         similar = self.vector_store.find_similar(
-            query_embedding=note_content['embedding'],
-            limit=10,
-            threshold=0.7
+            query_embedding=note_content["embedding"], limit=10, threshold=0.6
         )
 
         # Filter out existing connections
-        existing = set(link['target_id'] for link in self.vector_store.find_connected_notes(note_id))
+        existing = set(
+            link["target_id"]
+            for link in self.vector_store.find_connected_notes(note_id)
+        )
         suggestions = []
 
         for result in similar:
-            result_id = result['metadata'].get('doc_id')
+            result_id = result["metadata"].get("doc_id")
             if result_id and result_id not in existing and result_id != note_id:
-                suggestions.append({
-                    'note_id': result_id,
-                    'similarity': result['similarity'],
-                    'reason': 'Content similarity',
-                    'preview': result['content'][:200]
-                })
+                suggestions.append(
+                    {
+                        "note_id": result_id,
+                        "similarity": result["similarity"],
+                        "reason": "Content similarity",
+                        "preview": result["content"][:200],
+                    }
+                )
 
         return suggestions
 
@@ -122,17 +124,14 @@ class LinkService:
         if not note_content:
             return
 
-        content = note_content['content']
-        
+        content = note_content["content"]
+
         # Add new wiki links
         for link in links:
-            if link.get('add_wiki_link'):
-                target = link['target_id']
-                alias = link.get('alias', target)
+            if link.get("add_wiki_link"):
+                target = link["target_id"]
+                alias = link.get("alias", target)
                 content += f"\n[[{target}|{alias}]]"
 
         # Update the note in the vector store
-        self.vector_store.update_document(
-            doc_id=note_id,
-            content=content
-        )
+        self.vector_store.update_document(doc_id=note_id, content=content)
