@@ -1,18 +1,20 @@
 """Service for managing the vector store using ChromaDB."""
 
+import json
+import logging
 import os
 import time
+from sqlite3 import OperationalError
+from typing import Any, Dict, List, Optional
+
 import chromadb
 from chromadb.config import Settings
-from typing import List, Dict, Any, Optional
-import logging
-import json
-from sqlite3 import OperationalError
 
 logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 3
 RETRY_DELAY = 1  # seconds
+
 
 class VectorStoreService:
     """Manages document storage and retrieval using ChromaDB."""
@@ -24,39 +26,38 @@ class VectorStoreService:
         Args:
             config: Configuration dictionary containing vector store settings
         """
-        self.config = config.get('vector_store', {})
-        self.db_path = os.path.expanduser(self.config.get('path', '~/Documents/notes/.vector_store'))
+        self.config = config.get("vector_store", {})
+        self.db_path = os.path.expanduser(
+            self.config.get("path", "~/Documents/notes/.vector_store")
+        )
         os.makedirs(self.db_path, exist_ok=True)
-        
+
         self.client = chromadb.PersistentClient(
             path=self.db_path,
-            settings=Settings(
-                anonymized_telemetry=False,
-                allow_reset=True
-            )
+            settings=Settings(anonymized_telemetry=False, allow_reset=True),
         )
 
         # Create metadata collection for tracking document updates
         self.metadata_collection = self.client.get_or_create_collection(
             name="metadata",
-            metadata={"description": "Document metadata and update tracking"}
+            metadata={"description": "Document metadata and update tracking"},
         )
-        
+
         # Create collections for different types of content
         try:
             self.collections = {
-                'notes': self.client.get_or_create_collection(
+                "notes": self.client.get_or_create_collection(
                     name="notes",
-                    metadata={"description": "General notes and their chunks"}
+                    metadata={"description": "General notes and their chunks"},
                 ),
-                'links': self.client.get_or_create_collection(
+                "links": self.client.get_or_create_collection(
                     name="links",
-                    metadata={"description": "Link relationships between notes"}
+                    metadata={"description": "Link relationships between notes"},
                 ),
-                'references': self.client.get_or_create_collection(
+                "references": self.client.get_or_create_collection(
                     name="references",
-                    metadata={"description": "External references and citations"}
-                )
+                    metadata={"description": "External references and citations"},
+                ),
             }
             logger.info("Vector store collections initialized successfully")
         except Exception as e:
@@ -76,15 +77,12 @@ class VectorStoreService:
         """
         try:
             # Check if document exists in metadata collection
-            results = self.metadata_collection.get(
-                ids=[doc_id],
-                include=['metadatas']
-            )
-            
-            if not results['ids']:
+            results = self.metadata_collection.get(ids=[doc_id], include=["metadatas"])
+
+            if not results["ids"]:
                 return True  # Document not in store, needs to be added
-            
-            stored_time = results['metadatas'][0].get('modified_time', 0)
+
+            stored_time = results["metadatas"][0].get("modified_time", 0)
             return modified_time > stored_time
         except Exception as e:
             logger.error(f"Error checking document update status: {str(e)}")
@@ -98,19 +96,26 @@ class VectorStoreService:
                 return operation(*args, **kwargs)
             except OperationalError as e:
                 last_error = e
-                logger.warning(f"Database operation failed (attempt {attempt + 1}/{MAX_RETRIES}): {str(e)}")
+                logger.warning(
+                    f"Database operation failed (attempt {attempt + 1}/{MAX_RETRIES}): {str(e)}"
+                )
                 if attempt < MAX_RETRIES - 1:
                     time.sleep(RETRY_DELAY * (attempt + 1))
                 continue
             except Exception as e:
                 logger.error(f"Unexpected error during database operation: {str(e)}")
                 raise
-        
+
         logger.error(f"Operation failed after {MAX_RETRIES} attempts")
         raise last_error
 
-    def add_document(self, doc_id: str, chunks: List[str], embeddings: List[List[float]], 
-                    metadata: Optional[Dict[str, Any]] = None) -> None:
+    def add_document(
+        self,
+        doc_id: str,
+        chunks: List[str],
+        embeddings: List[List[float]],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
         """
         Add a document's chunks and their embeddings to the store.
 
@@ -122,33 +127,33 @@ class VectorStoreService:
         """
         # Ensure metadata exists
         metadata = metadata or {}
-        
+
         # Create chunk IDs and metadata
         chunk_ids = []
         chunk_metadata = []
-        
+
         for i, chunk in enumerate(chunks):
             chunk_id = f"{doc_id}_chunk_{i}"
             # Ensure all metadata values are valid types
             chunk_meta = {
                 "doc_id": doc_id,
                 "chunk_index": i,
-                "doc_type": metadata.get('type', 'note'),
-                "source_path": metadata.get('source', ''),
-                "date": metadata.get('date', '') or '',
-                "filename": metadata.get('filename', '') or ''
+                "doc_type": metadata.get("type", "note"),
+                "source_path": metadata.get("source", ""),
+                "date": metadata.get("date", "") or "",
+                "filename": metadata.get("filename", "") or "",
             }
-            
+
             # Extract links if present in the chunk
             wiki_links = self._extract_wiki_links(chunk)
             if wiki_links:
-                chunk_meta['wiki_links'] = json.dumps(wiki_links)
-            
+                chunk_meta["wiki_links"] = json.dumps(wiki_links)
+
             # Extract external references if present
             external_refs = self._extract_external_refs(chunk)
             if external_refs:
-                chunk_meta['external_refs'] = json.dumps(external_refs)
-            
+                chunk_meta["external_refs"] = json.dumps(external_refs)
+
             chunk_ids.append(chunk_id)
             chunk_metadata.append(chunk_meta)
 
@@ -156,34 +161,42 @@ class VectorStoreService:
         if chunk_ids:
             # Upsert chunks to main notes collection
             self._retry_operation(
-                self.collections['notes'].upsert,
+                self.collections["notes"].upsert,
                 ids=chunk_ids,
                 embeddings=embeddings,
                 documents=chunks,
-                metadatas=chunk_metadata
+                metadatas=chunk_metadata,
             )
             logger.info(f"Upserted {len(chunk_ids)} chunks to vector store")
         else:
             logger.warning(f"No valid chunks to add for document {doc_id}")
-        
+
         # Store link relationships
         self._store_link_relationships(doc_id, chunks, metadata)
-        
+
         # Store document metadata for update tracking
-        if metadata and 'modified_time' in metadata:
+        if metadata and "modified_time" in metadata:
             self._retry_operation(
                 self.metadata_collection.upsert,
                 ids=[doc_id],
-                metadatas=[{'modified_time': metadata['modified_time']}],
-                embeddings=[[1.0] * 1536],  # Dummy embedding for metadata tracking (OpenAI dimension)
-                documents=[""]  # Empty document as it's just for tracking
+                metadatas=[{"modified_time": metadata["modified_time"]}],
+                embeddings=[
+                    [1.0] * 1536
+                ],  # Dummy embedding for metadata tracking (OpenAI dimension)
+                documents=[""],  # Empty document as it's just for tracking
             )
-            
-        logger.info(f"Added document {doc_id} with {len(chunks)} chunks to vector store")
 
-    def find_similar(self, query_embedding: List[float], limit: int = 5, 
-                    threshold: Optional[float] = None,
-                    doc_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        logger.info(
+            f"Added document {doc_id} with {len(chunks)} chunks to vector store"
+        )
+
+    def find_similar(
+        self,
+        query_embedding: List[float],
+        limit: int = 5,
+        threshold: Optional[float] = None,
+        doc_type: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         """
         Find similar documents based on embedding similarity.
 
@@ -199,18 +212,20 @@ class VectorStoreService:
         try:
             # Prepare where clause if doc_type is specified
             where = {"doc_type": doc_type} if doc_type else None
-            
-            logger.info(f"Searching for similar documents with limit={limit}" + 
-                       (f", doc_type={doc_type}" if doc_type else ""))
-            
-            results = self.collections['notes'].query(
+
+            logger.info(
+                f"Searching for similar documents with limit={limit}"
+                + (f", doc_type={doc_type}" if doc_type else "")
+            )
+
+            results = self.collections["notes"].query(
                 query_embeddings=[query_embedding],
                 n_results=limit,
                 where=where,
-                include=["documents", "metadatas", "distances"]
+                include=["documents", "metadatas", "distances"],
             )
 
-            if not results['ids'][0]:
+            if not results["ids"][0]:
                 logger.info("No matching documents found")
                 return []
 
@@ -218,29 +233,37 @@ class VectorStoreService:
 
             # Format results
             similar_docs = []
-            for i in range(len(results['ids'][0])):
-                similarity = 1 - results['distances'][0][i]  # Convert distance to similarity
+            for i in range(len(results["ids"][0])):
+                similarity = (
+                    1 - results["distances"][0][i]
+                )  # Convert distance to similarity
                 if threshold and similarity < threshold:
-                    logger.info(f"Skipping result with similarity {similarity:.3f} below threshold {threshold}")
+                    logger.info(
+                        f"Skipping result with similarity {similarity:.3f} below threshold {threshold}"
+                    )
                     continue
                 logger.debug(f"Including result with similarity {similarity:.3f}")
-                
-                metadata = results['metadatas'][0][i]
+
+                metadata = results["metadatas"][0][i]
                 # Parse stored JSON fields
                 try:
-                    if 'wiki_links' in metadata and metadata['wiki_links']:
-                        metadata['wiki_links'] = json.loads(metadata['wiki_links'])
-                    if 'external_refs' in metadata and metadata['external_refs']:
-                        metadata['external_refs'] = json.loads(metadata['external_refs'])
+                    if "wiki_links" in metadata and metadata["wiki_links"]:
+                        metadata["wiki_links"] = json.loads(metadata["wiki_links"])
+                    if "external_refs" in metadata and metadata["external_refs"]:
+                        metadata["external_refs"] = json.loads(
+                            metadata["external_refs"]
+                        )
                 except json.JSONDecodeError as e:
                     logger.warning(f"Error parsing JSON fields in metadata: {e}")
-                    
-                similar_docs.append({
-                    'chunk_id': results['ids'][0][i],
-                    'content': results['documents'][0][i],
-                    'metadata': metadata,
-                    'similarity': similarity
-                })
+
+                similar_docs.append(
+                    {
+                        "chunk_id": results["ids"][0][i],
+                        "content": results["documents"][0][i],
+                        "metadata": metadata,
+                        "similarity": similarity,
+                    }
+                )
 
             logger.info(f"Returning {len(similar_docs)} results after filtering")
             return similar_docs
@@ -260,21 +283,25 @@ class VectorStoreService:
             List of connected documents with their relationship info
         """
         # Query the links collection
-        results = self.collections['links'].query(
-            query_embeddings=[[1.0] * 1536],  # Dummy embedding for exact match (OpenAI dimension)
+        results = self.collections["links"].query(
+            query_embeddings=[
+                [1.0] * 1536
+            ],  # Dummy embedding for exact match (OpenAI dimension)
             where={"source_id": doc_id},
-            include=["metadatas"]
+            include=["metadatas"],
         )
-        
+
         connected_docs = []
-        for metadata in results['metadatas'][0]:
-            connected_docs.append({
-                'target_id': metadata['target_id'],
-                'relationship': metadata.get('relationship', 'linked'),
-                'link_type': metadata.get('link_type', 'wiki'),
-                'context': metadata.get('context', '')
-            })
-            
+        for metadata in results["metadatas"][0]:
+            connected_docs.append(
+                {
+                    "target_id": metadata["target_id"],
+                    "relationship": metadata.get("relationship", "linked"),
+                    "link_type": metadata.get("link_type", "wiki"),
+                    "context": metadata.get("context", ""),
+                }
+            )
+
         return connected_docs
 
     def find_backlinks(self, doc_id: str) -> List[Dict[str, Any]]:
@@ -287,21 +314,25 @@ class VectorStoreService:
         Returns:
             List of documents linking to this document
         """
-        results = self.collections['links'].query(
-            query_embeddings=[[1.0] * 1536],  # Dummy embedding for exact match (OpenAI dimension)
+        results = self.collections["links"].query(
+            query_embeddings=[
+                [1.0] * 1536
+            ],  # Dummy embedding for exact match (OpenAI dimension)
             where={"target_id": doc_id},
-            include=["metadatas"]
+            include=["metadatas"],
         )
-        
+
         backlinks = []
-        for metadata in results['metadatas'][0]:
-            backlinks.append({
-                'source_id': metadata['source_id'],
-                'relationship': metadata.get('relationship', 'linked'),
-                'link_type': metadata.get('link_type', 'wiki'),
-                'context': metadata.get('context', '')
-            })
-            
+        for metadata in results["metadatas"][0]:
+            backlinks.append(
+                {
+                    "source_id": metadata["source_id"],
+                    "relationship": metadata.get("relationship", "linked"),
+                    "link_type": metadata.get("link_type", "wiki"),
+                    "context": metadata.get("context", ""),
+                }
+            )
+
         return backlinks
 
     def get_note_content(self, doc_id: str) -> Optional[Dict[str, Any]]:
@@ -317,41 +348,45 @@ class VectorStoreService:
         try:
             logger.info(f"Retrieving content for note: {doc_id}")
             # First try exact match on doc_id
-            results = self.collections['notes'].query(
-                query_embeddings=[[1.0] * 384],  # Dummy embedding for exact match
+            results = self.collections["notes"].query(
+                query_embeddings=[[1.0] * 1536],  # Dummy embedding for exact match
                 where={"doc_id": doc_id},
-                include=["documents", "metadatas", "embeddings"]
+                include=["documents", "metadatas", "embeddings"],
             )
-            
-            if not results['ids'][0]:
+
+            if not results["ids"][0]:
                 logger.warning(f"No content found for note: {doc_id}")
                 # Try searching by chunk IDs
-                chunk_results = self.collections['notes'].get(
+                chunk_results = self.collections["notes"].get(
                     ids=[f"{doc_id}_chunk_0"],
-                    include=["documents", "metadatas", "embeddings"]
+                    include=["documents", "metadatas", "embeddings"],
                 )
-                if chunk_results['ids']:
+                if chunk_results["ids"]:
                     logger.info(f"Found content via chunk ID for note: {doc_id}")
                     return {
-                        'content': chunk_results['documents'][0],
-                        'metadata': chunk_results['metadatas'][0],
-                        'embedding': chunk_results['embeddings'][0]
+                        "content": chunk_results["documents"][0],
+                        "metadata": chunk_results["metadatas"][0],
+                        "embedding": chunk_results["embeddings"][0],
                     }
                 logger.error(f"Note not found in vector store: {doc_id}")
                 return None
 
             return {
-                'content': results['documents'][0][0],
-                'metadata': results['metadatas'][0][0],
-                'embedding': results['embeddings'][0][0]
+                "content": results["documents"][0][0],
+                "metadata": results["metadatas"][0][0],
+                "embedding": results["embeddings"][0][0],
             }
         except Exception as e:
             logger.error(f"Error retrieving note content: {str(e)}")
             return None
 
-    def update_document(self, doc_id: str, new_chunks: List[str], 
-                       new_embeddings: List[List[float]], 
-                       metadata: Optional[Dict[str, Any]] = None) -> None:
+    def update_document(
+        self,
+        doc_id: str,
+        new_chunks: List[str],
+        new_embeddings: List[List[float]],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
         """
         Update an existing document with new chunks and embeddings.
 
@@ -362,15 +397,11 @@ class VectorStoreService:
             metadata: Optional new metadata
         """
         # Remove existing chunks for this document
-        self.collections['notes'].delete(
-            where={"doc_id": doc_id}
-        )
-        
+        self.collections["notes"].delete(where={"doc_id": doc_id})
+
         # Remove existing link relationships
-        self.collections['links'].delete(
-            where={"source_id": doc_id}
-        )
-        
+        self.collections["links"].delete(where={"source_id": doc_id})
+
         # Add new chunks
         self.add_document(doc_id, new_chunks, new_embeddings, metadata)
         logger.info(f"Updated document {doc_id} with {len(new_chunks)} chunks")
@@ -386,20 +417,17 @@ class VectorStoreService:
             List of extracted links with metadata
         """
         import re
+
         links = []
-        
+
         # Match [[link]] and [[link|alias]] formats
-        wiki_pattern = r'\[\[([^\]|]+)(?:\|([^\]]+))?\]\]'
-        
+        wiki_pattern = r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]"
+
         for match in re.finditer(wiki_pattern, text):
             link_target = match.group(1)
             link_alias = match.group(2) if match.group(2) else link_target
-            links.append({
-                'target': link_target,
-                'alias': link_alias,
-                'type': 'wiki'
-            })
-            
+            links.append({"target": link_target, "alias": link_alias, "type": "wiki"})
+
         return links
 
     def _extract_external_refs(self, text: str) -> List[Dict[str, str]]:
@@ -413,24 +441,22 @@ class VectorStoreService:
             List of extracted references with metadata
         """
         import re
+
         refs = []
-        
+
         # Match Markdown links [text](url)
-        link_pattern = r'\[([^\]]+)\]\(([^)]+)\)'
-        
+        link_pattern = r"\[([^\]]+)\]\(([^)]+)\)"
+
         for match in re.finditer(link_pattern, text):
             link_text = match.group(1)
             link_url = match.group(2)
-            refs.append({
-                'text': link_text,
-                'url': link_url,
-                'type': 'external'
-            })
-            
+            refs.append({"text": link_text, "url": link_url, "type": "external"})
+
         return refs
 
-    def _store_link_relationships(self, doc_id: str, chunks: List[str], 
-                                metadata: Dict[str, Any]) -> None:
+    def _store_link_relationships(
+        self, doc_id: str, chunks: List[str], metadata: Dict[str, Any]
+    ) -> None:
         """
         Store link relationships between documents.
 
@@ -444,31 +470,39 @@ class VectorStoreService:
             wiki_links = self._extract_wiki_links(chunk)
             for link in wiki_links:
                 link_id = f"{doc_id}_to_{link['target']}"
-                self.collections['links'].upsert(
+                self.collections["links"].upsert(
                     ids=[link_id],
-                    embeddings=[[1.0] * 1536],  # Dummy embedding for exact match (OpenAI dimension)
+                    embeddings=[
+                        [1.0] * 1536
+                    ],  # Dummy embedding for exact match (OpenAI dimension)
                     documents=[""],  # No need to store text
-                    metadatas=[{
-                        'source_id': doc_id,
-                        'target_id': link['target'],
-                        'relationship': 'references',
-                        'link_type': 'wiki',
-                        'context': chunk[:200]  # Store some context
-                    }]
+                    metadatas=[
+                        {
+                            "source_id": doc_id,
+                            "target_id": link["target"],
+                            "relationship": "references",
+                            "link_type": "wiki",
+                            "context": chunk[:200],  # Store some context
+                        }
+                    ],
                 )
-            
+
             # Extract and store external references
             external_refs = self._extract_external_refs(chunk)
             for ref in external_refs:
                 ref_id = f"{doc_id}_to_{hash(ref['url'])}"
-                self.collections['references'].upsert(
+                self.collections["references"].upsert(
                     ids=[ref_id],
-                    embeddings=[[1.0] * 1536],  # Dummy embedding for exact match (OpenAI dimension)
-                    documents=[ref['url']],
-                    metadatas=[{
-                        'source_id': doc_id,
-                        'title': ref['text'],
-                        'url': ref['url'],
-                        'context': chunk[:200]
-                    }]
+                    embeddings=[
+                        [1.0] * 1536
+                    ],  # Dummy embedding for exact match (OpenAI dimension)
+                    documents=[ref["url"]],
+                    metadatas=[
+                        {
+                            "source_id": doc_id,
+                            "title": ref["text"],
+                            "url": ref["url"],
+                            "context": chunk[:200],
+                        }
+                    ],
                 )

@@ -1,4 +1,5 @@
 config.yaml
+config-prod.yaml
 __pycache__/
 .aider.*
 .aider*

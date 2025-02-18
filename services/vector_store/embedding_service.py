@@ -1,11 +1,13 @@
 """Service for generating embeddings using OpenAI's API."""
 
-from typing import List, Dict, Any
-import openai
 import logging
+from typing import Any, Dict, List
+
+import openai
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
+
 
 class EmbeddingService:
     """Manages the generation of embeddings for text content."""
@@ -18,8 +20,9 @@ class EmbeddingService:
             config: Configuration dictionary containing API settings
         """
         self.config = config
-        openai.api_key = config['api_key']
+        openai.api_key = config["api_key"]
         self.client = openai.OpenAI()
+        # self.model = "text-embedding-3-small"  # Current best model for embeddings
         self.model = "text-embedding-ada-002"  # Current best model for embeddings
         self.batch_size = 100  # Maximum batch size for embedding requests
 
@@ -34,16 +37,15 @@ class EmbeddingService:
             List of embedding values
         """
         try:
-            response = self.client.embeddings.create(
-                model=self.model,
-                input=text
-            )
+            response = self.client.embeddings.create(model=self.model, input=text)
             return response.data[0].embedding
         except Exception as e:
             logger.error(f"Error generating embedding: {str(e)}")
             raise
 
-    def embed_chunks(self, chunks: List[str], show_progress: bool = True) -> List[List[float]]:
+    def embed_chunks(
+        self, chunks: List[str], show_progress: bool = True
+    ) -> List[List[float]]:
         """
         Generate embeddings for multiple text chunks.
 
@@ -55,17 +57,16 @@ class EmbeddingService:
             List of embedding vectors
         """
         embeddings = []
-        
+
         # Process in batches
-        for i in tqdm(range(0, len(chunks), self.batch_size), 
-                     disable=not show_progress,
-                     desc="Generating embeddings"):
-            batch = chunks[i:i + self.batch_size]
+        for i in tqdm(
+            range(0, len(chunks), self.batch_size),
+            disable=not show_progress,
+            desc="Generating embeddings",
+        ):
+            batch = chunks[i : i + self.batch_size]
             try:
-                response = self.client.embeddings.create(
-                    model=self.model,
-                    input=batch
-                )
+                response = self.client.embeddings.create(model=self.model, input=batch)
                 batch_embeddings = [data.embedding for data in response.data]
                 embeddings.extend(batch_embeddings)
             except Exception as e:
@@ -84,5 +85,5 @@ class EmbeddingService:
         return {
             "model": self.model,
             "dimensions": 1536,  # Ada-002 embedding size
-            "normalized": True
+            "normalized": True,
         }

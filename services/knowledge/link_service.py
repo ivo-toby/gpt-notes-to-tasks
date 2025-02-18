@@ -1,6 +1,7 @@
 """Service for managing and analyzing links between notes."""
 
 import logging
+import os
 from typing import List, Dict, Any, Optional
 import re
 
@@ -28,6 +29,11 @@ class LinkService:
         Returns:
             Dictionary containing relationship analysis
         """
+        # Strip the base path if it exists
+        base_path = "~/workspace/rd/cf-notes/"
+        expanded_base = os.path.expanduser(base_path)
+        if note_id.startswith(expanded_base):
+            note_id = note_id[len(expanded_base):]
         logger.info(f"Starting relationship analysis for note: {note_id}")
         
         # Get existing connections
