@@ -58,14 +58,22 @@ class NotesService:
 
         Args:
             notes (str): Full notes content
-            today_str (str, optional): Date to extract notes for. Defaults to today.
+            today_str (str, optional): Date to extract notes for. Can be:
+                - YYYY-MM-DD format (e.g., "2024-02-16")
+                - "yesterday" for previous day
+                - "today" for current day
+                Defaults to today.
 
         Returns:
             str: Notes for the specified date
         """
-        # Step 1: Check if `today_str` is not `None`
-        if today_str is not None:
-            # Step 2: Validate `today_str` as a date string
+        # Handle relative date strings
+        if today_str == "yesterday":
+            today_str = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        elif today_str == "today":
+            today_str = datetime.now().strftime("%Y-%m-%d")
+        elif today_str is not None:
+            # Validate date string format
             try:
                 datetime.strptime(today_str, "%Y-%m-%d")
             except ValueError:

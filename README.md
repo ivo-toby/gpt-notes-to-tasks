@@ -18,7 +18,230 @@ Based on timestamped notes in a single file it can:
 
 _Please note_
 
-This script has been entirely created by CodeLLama, GPT-4, and Claude 3.5 Sonnet.
+This script has been entirely created by CodeLLama, GPT-4o, Claude 3.5 Sonnet and Gemini 2 Flash using Anthropic MCP, Cursor and aider.chat.
+
+## Getting Started
+
+This guide will help you set up and run the script safely with your notes.
+
+### 1. Prepare Your Notes Repository
+
+First, set up a Git repository for your notes (recommended):
+
+```bash
+# Create a new directory for your notes
+mkdir ~/Documents/notes
+cd ~/Documents/notes
+
+# Initialize git repository
+git init
+
+# Create basic structure
+mkdir daily weekly meetingnotes learnings
+touch .gitignore
+
+# Add recommended entries to .gitignore
+cat << EOF > .gitignore
+.vector_store/
+.obsidian/
+.trash/
+*.excalidraw.md
+.DS_Store
+EOF
+
+# Initial commit
+git add .
+git commit -m "Initial notes structure"
+```
+
+### 2. Install Dependencies
+
+1. Clone this tool repository:
+
+   ```bash
+   git clone https://github.com/yourusername/gpt-notes-to-tasks.git
+   cd gpt-notes-to-tasks
+   ```
+
+2. Create and activate a virtual environment:
+
+   ```bash
+   # Using venv (recommended)
+   python -m venv .venv
+   source .venv/bin/activate  # On Unix/macOS
+   # or
+   .venv\Scripts\activate  # On Windows
+   ```
+
+3. Install required packages:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Install embedding model dependencies (choose one):
+
+   ```bash
+   # For OpenAI (default)
+   pip install openai
+
+   # For local models with Ollama (recommended for privacy)
+   # First install Ollama
+   curl https://ollama.ai/install.sh | sh
+   # Start Ollama service
+   ollama serve
+   # Pull embedding model
+   ollama pull nomic-embed-text
+   ```
+
+### 3. Configure the Tool
+
+1. Create your configuration:
+
+   ```bash
+   # Copy template
+   cp config.template.yaml config.yaml
+   ```
+
+2. Edit `config.yaml` with your settings:
+
+   ```yaml
+   # Essential settings
+   notes_base_dir: "~/Documents/notes" # Your notes directory
+   daily_notes_file: "~/Documents/notes/daily/daily.md"
+   daily_output_dir: "~/Documents/notes/daily"
+   weekly_output_dir: "~/Documents/notes/weekly"
+   meeting_notes_output_dir: "~/Documents/notes/meetingnotes"
+   learnings_file: "~/Documents/notes/learnings/learnings.md"
+   learnings_output_dir: "~/Documents/notes/learnings"
+
+   # For OpenAI
+   api_key: "your-api-key" # Required for OpenAI embeddings
+   model: "gpt-4" # or gpt-3.5-turbo for lower cost
+
+   # For local embeddings (recommended)
+   embeddings:
+     model_type: "ollama"
+     model_name: "nomic-embed-text"
+     ollama_config:
+       base_url: "http://localhost:11434"
+       num_ctx: 512
+       num_thread: 4
+   ```
+
+### 4. First Run
+
+1. Test with dry run (safe, no changes):
+
+   ```bash
+   # Test daily notes processing
+   python main.py notes --dry-run
+
+   # Test knowledge base indexing
+   python main.py kb --reindex --dry-run
+   ```
+
+2. Initialize knowledge base:
+
+   ```bash
+   # Build initial index
+   python main.py kb --reindex
+   ```
+
+3. Test search functionality:
+   ```bash
+   # Try searching
+   python main.py kb --query "test query"
+   ```
+
+### 5. Regular Usage
+
+1. Set up daily note taking:
+
+   ```bash
+   # Add to your .zshrc or .bashrc
+   alias daily="jrnl daily"  # If using jrnl
+   # or
+   alias daily="nvim ~/Documents/notes/daily/daily.md"
+   ```
+
+2. Recommended workflow:
+
+   ```bash
+   # Morning: Review yesterday's notes
+   python main.py notes --date yesterday
+
+   # Process specific date
+   python main.py notes --date 2024-02-16
+
+   # Process today's notes (default)
+   python main.py notes
+
+   # Weekly: Generate summary
+   python main.py notes --weekly
+
+   # Periodically: Update knowledge base
+   python main.py kb --update
+   ```
+
+   The `--date` option accepts:
+
+   - `yesterday` for the previous day
+   - `today` for the current day (default)
+   - A specific date in YYYY-MM-DD format (e.g., "2024-02-16")
+
+3. Git backup routine:
+   ```bash
+   # Add to your daily routine
+   cd ~/Documents/notes
+   git add .
+   git commit -m "Daily notes update: $(date '+%Y-%m-%d')"
+   git push  # If using remote repository
+   ```
+
+### 6. Maintenance Best Practices
+
+1. Regular backups:
+
+   - Keep your notes in git
+   - Consider using a private GitHub/GitLab repository
+   - Regularly push changes
+
+2. Vector store maintenance:
+
+   ```bash
+   # Monthly: Rebuild index to optimize
+   rm -rf ~/Documents/notes/.vector_store
+   python main.py kb --reindex
+   ```
+
+3. Monitor and adjust:
+   - Watch similarity scores in search results
+   - Adjust thresholds if needed
+   - Keep dependencies updated
+
+### 7. Troubleshooting
+
+If you encounter issues:
+
+1. Check logs:
+
+   ```bash
+   # Enable debug logging
+   sed -i 's/level: "INFO"/level: "DEBUG"/' config.yaml
+   ```
+
+2. Verify embeddings:
+
+   ```bash
+   # Test embedding service
+   python main.py kb --query "test" --debug
+   ```
+
+3. Common fixes:
+   - Clear vector store: `rm -rf ~/Documents/notes/.vector_store`
+   - Reindex: `python main.py kb --reindex`
+   - Check Ollama service: `curl http://localhost:11434/api/embeddings`
 
 ## Why this script
 
@@ -294,153 +517,3 @@ When switching embedding models:
    rm -rf ~/Documents/notes/.vector_store
    python main.py kb --reindex
    ```
-4. Test with different threshold values to find the best balance for your content
-
-Plus the standard configuration for note processing:
-
-- `daily_notes_file`: Source file for daily notes
-- `daily_output_dir`: Directory for processed daily notes
-- `weekly_output_dir`: Directory for weekly summaries
-- `meeting_notes_output_dir`: Directory for meeting notes
-- `api_key`: OpenAI API key
-- `model`: OpenAI model to use (e.g., "gpt-4")
-- `learnings_file`: Source file for learnings
-- `learnings_output_dir`: Directory for processed learnings
-
-## Important Note About Changing Embedding Models
-
-When changing the embedding model configuration, you must reindex your knowledge base to ensure consistency. Different models produce different embedding vectors, which are not compatible with each other. To reindex:
-
-1. Delete the existing vector store:
-
-   ```bash
-   rm -rf ~/Documents/notes/.vector_store  # Adjust path based on your config
-   ```
-
-2. Reindex your notes:
-   ```bash
-   python main.py kb --reindex
-   ```
-
-## Usage
-
-The script now has two main command groups:
-
-### Notes Processing Commands
-
-Process daily notes, weekly summaries, and learnings:
-
-```bash
-# Process daily notes
-python main.py notes --date 2024-02-16 --dry-run
-
-# Generate weekly summary
-python main.py notes --weekly --replace-summary
-
-# Process meeting notes
-python main.py notes --meetingnotes
-
-# Process learnings
-python main.py notes --process-learnings
-```
-
-### Knowledge Base Commands
-
-Manage and query your semantic knowledge base:
-
-```bash
-# Reindex all notes (with dry run)
-python main.py kb --reindex --dry-run
-
-# Update only modified notes (faster than full reindex)
-python main.py kb --update
-
-# Analyze and auto-link all notes
-python main.py kb --analyze-all --auto-link
-
-# Analyze and auto-link only recently modified notes
-python main.py kb --analyze-updated --auto-link
-
-# Analyze links for a specific note
-python main.py kb --analyze-links "path/to/note.md" --auto-link
-
-# Search for content
-python main.py kb --query "python async programming" --limit 10
-
-# Show connections for a note
-python main.py kb --show-connections "path/to/note.md"
-
-# Show connections as a Mermaid graph
-python main.py kb --show-connections "path/to/note.md" --graph
-
-# Find notes by tag
-python main.py kb --find-by-tag "programming"
-
-# Find notes by date
-python main.py kb --find-by-date "2024-02-16"
-
-# Show note's semantic structure
-python main.py kb --note-structure "path/to/note.md"
-
-# Search within specific note type
-python main.py kb --query "meeting agenda" --note-type "meeting"
-```
-
-### Common Options
-
-These options can be used with any command:
-
-- `--config`: Specify config file (default: config.yaml)
-- `--dry-run`: Show what would happen without making changes
-- `--limit N`: Maximum number of results to return (default: 5)
-
-## Cron
-
-You can set up cron jobs to run the script automatically:
-
-```bash
-# Process daily notes at 6 PM
-0 18 * * * /usr/bin/python3 /path/to/script.py notes
-
-# Update knowledge base at midnight
-0 0 * * * /usr/bin/python3 /path/to/script.py kb --reindex
-```
-
-## Knowledge Base Management
-
-The script maintains a semantic knowledge base of your notes using vector embeddings. You can:
-
-- Reindex all notes using `--reindex`
-- Update only modified notes using `--update` (faster than full reindex)
-- Search for similar content across all notes
-- View note connections and relationships
-- Find notes by tags or dates
-- Analyze note structure
-- Automatically discover and add semantic links between notes
-- Maintain backlinks between connected notes
-- Generate readable aliases for wiki-links
-
-The `--update` command checks file modification times and only processes notes that have changed since they were last indexed, making it much faster than a full reindex.
-
-### Link Management
-
-The script can automatically analyze and manage links between your notes:
-
-- Discover semantic relationships between notes based on content similarity
-- Add wiki-links with readable aliases
-- Maintain backlinks in target notes
-- Update only modified notes to avoid unnecessary processing
-- Place links in appropriate sections (Related, Links, References)
-- Handle both forward links and backlinks consistently
-
-Use `--analyze-links` for a single note or `--analyze-all`/`--analyze-updated` for batch processing. Add `--auto-link` to automatically add suggested links without prompting.
-
-## Future Improvements
-
-- Add mail functionality to send summaries
-- Add support for processing URLs and their content
-- Add support for processing emails into notes
-- Add automatic metadata extraction
-- Add support for bi-directional linking
-- Add support for timeline views
-- Add support for knowledge graph visualization
