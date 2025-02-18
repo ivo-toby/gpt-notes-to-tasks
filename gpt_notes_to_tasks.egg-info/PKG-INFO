@@ -1,0 +1,22 @@
+Metadata-Version: 2.2
+Name: gpt-notes-to-tasks
+Version: 0.1.0
+Requires-Python: >=3.8
+License-File: LICENSE
+Requires-Dist: openai
+Requires-Dist: langchain
+Requires-Dist: langchain-community
+Requires-Dist: chromadb
+Requires-Dist: tqdm
+Requires-Dist: tiktoken
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+Requires-Dist: pytest-mock; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: flake8; extra == "dev"
+Requires-Dist: mypy; extra == "dev"
+Requires-Dist: isort; extra == "dev"
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python

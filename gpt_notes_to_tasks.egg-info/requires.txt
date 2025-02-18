@@ -1,0 +1,15 @@
+openai
+langchain
+langchain-community
+chromadb
+tqdm
+tiktoken
+
+[dev]
+pytest
+pytest-cov
+pytest-mock
+black
+flake8
+mypy
+isort
