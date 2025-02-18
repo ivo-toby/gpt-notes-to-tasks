@@ -203,6 +203,15 @@ python main.py kb --reindex --dry-run
 # Update only modified notes (faster than full reindex)
 python main.py kb --update
 
+# Analyze and auto-link all notes
+python main.py kb --analyze-all --auto-link
+
+# Analyze and auto-link only recently modified notes
+python main.py kb --analyze-updated --auto-link
+
+# Analyze links for a specific note
+python main.py kb --analyze-links "path/to/note.md" --auto-link
+
 # Search for content
 python main.py kb --query "python async programming" --limit 10
 
@@ -255,8 +264,24 @@ The script maintains a semantic knowledge base of your notes using vector embedd
 - View note connections and relationships
 - Find notes by tags or dates
 - Analyze note structure
+- Automatically discover and add semantic links between notes
+- Maintain backlinks between connected notes
+- Generate readable aliases for wiki-links
 
 The `--update` command checks file modification times and only processes notes that have changed since they were last indexed, making it much faster than a full reindex.
+
+### Link Management
+
+The script can automatically analyze and manage links between your notes:
+
+- Discover semantic relationships between notes based on content similarity
+- Add wiki-links with readable aliases
+- Maintain backlinks in target notes
+- Update only modified notes to avoid unnecessary processing
+- Place links in appropriate sections (Related, Links, References)
+- Handle both forward links and backlinks consistently
+
+Use `--analyze-links` for a single note or `--analyze-all`/`--analyze-updated` for batch processing. Add `--auto-link` to automatically add suggested links without prompting.
 
 ## Future Improvements
 
