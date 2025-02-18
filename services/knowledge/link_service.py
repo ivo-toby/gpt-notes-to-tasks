@@ -258,27 +258,37 @@ class LinkService:
         """Insert a wiki link in a semantically appropriate location."""
         # Try to find a "Related" or "Links" section
         sections = ["## Related", "## Links", "## References"]
+        
+        # First try to find an existing section
         for section in sections:
             if section in content:
-                # Find the section and insert link after its header
-                section_start = content.find(section)
-                next_section_start = float('inf')
+                # Split content at the section
+                before_section, section_content = content.split(section, 1)
                 
-                # Find the start of the next section if it exists
+                # Find the next section if it exists
+                next_section_start = len(section_content)
                 for next_section in ["##"]:
-                    pos = content.find(next_section, section_start + len(section))
+                    pos = section_content.find(next_section)
                     if pos != -1:
-                        next_section_start = min(next_section_start, pos)
+                        next_section_start = pos
                 
-                if next_section_start == float('inf'):
-                    # No next section found, append to the end of the section
-                    return f"{content[:section_start + len(section)]}\n{new_link}\n{content[section_start + len(section):]}"
+                # Insert the new link after the section header but before any existing content
+                section_content_start = section_content[:next_section_start].strip()
+                section_content_rest = section_content[next_section_start:]
+                
+                # Add the new link, preserving existing content
+                updated_section = f"{section}\n{section_content_start}"
+                if section_content_start:
+                    updated_section += f"\n{new_link}"
                 else:
-                    # Insert before the next section
-                    return f"{content[:section_start + len(section)]}\n{new_link}\n{content[section_start + len(section):]}"
+                    updated_section += new_link
+                
+                # Reconstruct the full content
+                return f"{before_section}{updated_section}{section_content_rest}"
         
         # If no appropriate section found, add to end with header
-        return f"{content}\n\n## Related\n{new_link}"
+        # Ensure we preserve all existing content
+        return f"{content.rstrip()}\n\n## Related\n{new_link}"
 
     def _remove_wiki_link(self, content: str, target: str) -> str:
         """Remove a wiki link from the content."""
