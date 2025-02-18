@@ -62,11 +62,11 @@ def process_new_learnings(cfg, cli_args):
 def process_knowledge_base(cfg, cli_args):
     """Handle knowledge base operations."""
     try:
-        vector_store = VectorStoreService(cfg)
         embedding_service = EmbeddingService(cfg)
         chunking_service = ChunkingService(cfg)
+        vector_store = VectorStoreService(cfg, chunking_service, embedding_service)
         summary_service = SummaryService(cfg)
-        link_service = LinkService(vector_store)
+        link_service = LinkService(vector_store, chunking_service, embedding_service)
 
         if cli_args.reindex or cli_args.update:
             if cli_args.reindex:

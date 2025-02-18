@@ -19,14 +19,18 @@ RETRY_DELAY = 1  # seconds
 class VectorStoreService:
     """Manages document storage and retrieval using ChromaDB."""
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], chunking_service=None, embedding_service=None):
         """
         Initialize the vector store service.
 
         Args:
             config: Configuration dictionary containing vector store settings
+            chunking_service: Optional ChunkingService instance
+            embedding_service: Optional EmbeddingService instance
         """
         self.config = config.get("vector_store", {})
+        self.chunking_service = chunking_service
+        self.embedding_service = embedding_service
         self.db_path = os.path.expanduser(
             self.config.get("path", "~/Documents/notes/.vector_store")
         )
