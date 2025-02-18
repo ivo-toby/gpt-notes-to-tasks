@@ -204,10 +204,18 @@ def test_find_backlinks(vector_store):
 
 def test_get_note_content(vector_store):
     """Test retrieving note content."""
+    # Set up mock return value
+    notes_collection = vector_store.collections["notes"]
+    notes_collection.query.return_value = {
+        "ids": [["test-note_chunk_0"]],
+        "documents": [["Test content"]],
+        "metadatas": [[{"doc_id": "test-note", "chunk_index": 0, "doc_type": "note"}]],
+        "embeddings": [[[0.1] * 1024]]
+    }
+
     result = vector_store.get_note_content("test-note")
 
     # Verify query was executed with correct parameters
-    notes_collection = vector_store.collections["notes"]
     notes_collection.query.assert_called_once_with(
         query_embeddings=[[1.0] * 1024],
         where={"doc_id": "test-note"},
