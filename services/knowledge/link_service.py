@@ -261,9 +261,6 @@ class LinkService:
                 raise
         else:
             logger.info(f"No new links to add for: {note_path}")
-            except IOError as e:
-                logger.error(f"Error writing to file {note_path}: {str(e)}")
-                raise
 
     def _generate_alias(self, target: str) -> str:
         """Generate a readable alias from the target ID."""
