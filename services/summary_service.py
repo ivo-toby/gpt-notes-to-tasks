@@ -55,13 +55,14 @@ class SummaryService:
 
         def get_note_type(filepath: str) -> str:
             """Determine the type of note based on its location and content."""
-            if "daily" in filepath:
+            filepath_lower = filepath.lower()
+            if "daily" in filepath_lower:
                 return "daily"
-            elif "Weekly" in filepath:
+            elif "weekly" in filepath_lower:
                 return "weekly"
-            elif "meetingnotes" in filepath:
+            elif "meetingnotes" in filepath_lower:
                 return "meeting"
-            elif "learnings" in filepath:
+            elif "learnings" in filepath_lower:
                 return "learning"
             return "note"  # default type
 
@@ -256,18 +257,16 @@ class SummaryService:
             datetime.strptime(date_str, "%Y-%m-%d") if date_str else datetime.now()
         )
 
-        start_date = current_date - timedelta(days=current_date.weekday())
-        end_date = start_date + timedelta(days=6)
-
-        iso_year, iso_week, _ = start_date.isocalendar()
-        week_identifier = f"{iso_year}-W{iso_week:02d}"
+        year = current_date.strftime("%Y")
+        month = current_date.strftime("%m")
+        week_number = current_date.strftime("%U")
 
         output_dir = create_output_dir(
             os.path.expanduser(
-                f"{self.config['weekly_output_dir']}/{iso_year}/{iso_week:02d}"
+                f"{self.config['weekly_output_dir']}/{year}/{month}/{week_number}"
             )
         )
-        output_file = os.path.join(output_dir, f"week_{week_identifier}_summary.md")
+        output_file = os.path.join(output_dir, "week_summary.md")
 
         if replace_summary or not os.path.exists(output_file):
             content = create_weekly_summary_content(weekly_summary, weekly_notes)
@@ -279,6 +278,8 @@ class SummaryService:
             )
             content = existing_content + "\n\n" + additional_content
 
+        start_date = current_date - timedelta(days=current_date.weekday())
+        end_date = start_date + timedelta(days=6)
         date_range = (
             f"# Weekly Summary: {start_date.strftime('%Y-%m-%d')} "
             f"to {end_date.strftime('%Y-%m-%d')}\n\n"
