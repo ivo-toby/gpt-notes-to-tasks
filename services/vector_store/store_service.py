@@ -38,21 +38,42 @@ class VectorStoreService:
         )
         os.makedirs(self.db_path, exist_ok=True)
 
+        # Get HNSW settings from config
+        hnsw_config = self.config.get("hnsw_config", {})
+
+        # Initialize ChromaDB with settings
         self.client = chromadb.PersistentClient(
             path=self.db_path,
-            settings=Settings(anonymized_telemetry=False, allow_reset=True),
+            settings=Settings(
+                anonymized_telemetry=False,
+                allow_reset=True,
+                persist_directory=self.db_path,
+            ),
         )
+
+        # Configure collection settings with HNSW parameters
+        collection_params = {
+            "hnsw:construction_ef": hnsw_config.get("ef_construction", 400),
+            "hnsw:search_ef": hnsw_config.get("ef_search", 200),
+            "hnsw:M": hnsw_config.get("m", 128),
+        }
 
         # Initialize system metadata collection
         self.system_collection = self.client.get_or_create_collection(
             name="system",
-            metadata={"description": "System-level metadata and tracking"},
+            metadata={
+                "description": "System-level metadata and tracking",
+                **collection_params
+            },
         )
 
         # Create metadata collection for tracking document updates
         self.metadata_collection = self.client.get_or_create_collection(
             name="metadata",
-            metadata={"description": "Document metadata and update tracking"},
+            metadata={
+                "description": "Document metadata and update tracking",
+                **collection_params
+            },
         )
 
         # Create collections for different types of content
@@ -60,15 +81,24 @@ class VectorStoreService:
             self.collections = {
                 "notes": self.client.get_or_create_collection(
                     name="notes",
-                    metadata={"description": "General notes and their chunks"},
+                    metadata={
+                        "description": "General notes and their chunks",
+                        **collection_params
+                    },
                 ),
                 "links": self.client.get_or_create_collection(
                     name="links",
-                    metadata={"description": "Link relationships between notes"},
+                    metadata={
+                        "description": "Link relationships between notes",
+                        **collection_params
+                    },
                 ),
                 "references": self.client.get_or_create_collection(
                     name="references",
-                    metadata={"description": "External references and citations"},
+                    metadata={
+                        "description": "External references and citations",
+                        **collection_params
+                    },
                 ),
             }
             logger.info("Vector store collections initialized successfully")

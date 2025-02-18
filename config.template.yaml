@@ -26,6 +26,11 @@ vector_store:
   chunk_size_min: 50 # Minimum characters per chunk
   chunk_size_max: 500 # Maximum characters per chunk
   similarity_threshold: 0.85 # Minimum similarity score for matches
+  hnsw_config:
+    ef_construction: 200 # Controls index build quality (higher = better, but slower)
+    ef_search: 100 # Controls search quality (higher = better, but slower)
+    m: 64 # Number of connections per element (higher = better recall, more memory)
+    max_elements: 1000000 # Maximum number of elements in the index
 
 # Chunking configuration
 chunking_config:
