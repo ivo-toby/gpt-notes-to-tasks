@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import time
+import numpy as np
 from sqlite3 import OperationalError
 from typing import Any, Dict, List, Optional
 
@@ -188,6 +189,9 @@ class VectorStoreService:
         embeddings: List[List[float]],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
+        # Normalize embeddings if using Ollama
+        if self.embedding_service and "ollama" in self.embedding_service.__class__.__name__.lower():
+            embeddings = [embedding / np.linalg.norm(embedding) for embedding in embeddings]
         """
         Add a document's chunks and their embeddings to the store.
 

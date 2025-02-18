@@ -8,6 +8,7 @@ including document storage, retrieval, and relationship management.
 import json
 import os
 import time
+import numpy as np
 from unittest.mock import Mock, patch
 import pytest
 from chromadb.api.models.Collection import Collection
@@ -127,7 +128,10 @@ def test_add_document(vector_store):
     """Test adding a new document."""
     # Patch the extract methods to handle content directly
     with patch.object(vector_store, '_extract_wiki_links') as mock_wiki_links, \
-         patch.object(vector_store, '_extract_external_refs') as mock_external_refs:
+         patch.object(vector_store, '_extract_external_refs') as mock_external_refs, \
+         patch.object(vector_store.embedding_service, '__class__') as mock_class:
+        # Set up mock for Ollama detection
+        mock_class.__name__ = 'OllamaEmbedding'
         mock_wiki_links.return_value = []
         mock_external_refs.return_value = []
 
