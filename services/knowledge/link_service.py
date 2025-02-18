@@ -21,6 +21,8 @@ class LinkService:
         self.vector_store = vector_store
         self.chunking_service = chunking_service or vector_store.chunking_service
         self.embedding_service = embedding_service or vector_store.embedding_service
+        self.base_path = os.path.expanduser(vector_store.config.get('path', '~/Documents/notes'))
+        self.base_path = os.path.dirname(self.base_path)  # Get parent directory of .vector_store
 
     def analyze_relationships(self, note_id: str) -> Dict[str, Any]:
         """
@@ -247,8 +249,8 @@ class LinkService:
                 )
 
         try:
-            # Get full path for target note
-            target_path = os.path.join(os.path.dirname(source_path), target_id)
+            # Get full path for target note using base path
+            target_path = os.path.join(self.base_path, target_id)
 
             # Write changes to the target file
             with open(target_path, "w") as f:
