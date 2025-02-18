@@ -115,7 +115,18 @@ class LinkService:
 
     def update_obsidian_links(self, note_path: str, links: List[Dict[str, Any]], 
                              update_backlinks: bool = True) -> None:
-        # Convert path to relative format
+        """
+        Update Obsidian-style wiki links in a note file.
+
+        Args:
+            note_path: Full path to the note file
+            links: List of links to add/update
+            update_backlinks: Whether to update backlinks in target notes
+        """
+        # Ensure we have the full path
+        note_path = os.path.expanduser(note_path)
+        
+        # Get relative ID for vector store
         note_id = note_path
         if 'cf-notes/' in note_path:
             note_id = note_path.split('cf-notes/')[-1]
@@ -158,19 +169,28 @@ class LinkService:
                 updated = True
 
         if updated:
-            # Update the note content using existing services
-            chunks = self.vector_store.chunking_service.chunk_document(
-                content,
-                doc_type="note"
-            )
-            chunk_texts = [chunk['content'] for chunk in chunks]
-            embeddings = self.vector_store.embedding_service.embed_chunks(chunk_texts)
-            self.vector_store.update_document(
-                doc_id=note_id,
-                new_chunks=chunk_texts,
-                new_embeddings=embeddings
-            )
-            logger.info(f"Updated links in note: {note_id}")
+            try:
+                # Write changes to the file
+                with open(note_path, 'w') as f:
+                    f.write(content)
+                logger.info(f"Updated links in file: {note_path}")
+
+                # Update the vector store
+                chunks = self.vector_store.chunking_service.chunk_document(
+                    content,
+                    doc_type="note"
+                )
+                chunk_texts = [chunk['content'] for chunk in chunks]
+                embeddings = self.vector_store.embedding_service.embed_chunks(chunk_texts)
+                self.vector_store.update_document(
+                    doc_id=note_id,
+                    new_chunks=chunk_texts,
+                    new_embeddings=embeddings
+                )
+                logger.info(f"Updated vector store for: {note_id}")
+            except IOError as e:
+                logger.error(f"Error writing to file {note_path}: {str(e)}")
+                raise
 
     def _generate_alias(self, target: str) -> str:
         """Generate a readable alias from the target ID."""
@@ -220,15 +240,28 @@ class LinkService:
             if backlink not in content:
                 content = content.replace("## Backlinks\n", f"## Backlinks\n{backlink}\n")
 
-        # Update target note using existing services
-        chunks = self.vector_store.chunking_service.chunk_document(
-            content,
-            doc_type="note"
-        )
-        chunk_texts = [chunk['content'] for chunk in chunks]
-        embeddings = self.vector_store.embedding_service.embed_chunks(chunk_texts)
-        self.vector_store.update_document(
-            doc_id=target_id,
-            new_chunks=chunk_texts,
-            new_embeddings=embeddings
-        )
+        try:
+            # Get full path for target note
+            target_path = os.path.join(os.path.dirname(note_path), target_id)
+            
+            # Write changes to the target file
+            with open(target_path, 'w') as f:
+                f.write(content)
+            logger.info(f"Updated backlinks in file: {target_path}")
+
+            # Update target note in vector store
+            chunks = self.vector_store.chunking_service.chunk_document(
+                content,
+                doc_type="note"
+            )
+            chunk_texts = [chunk['content'] for chunk in chunks]
+            embeddings = self.vector_store.embedding_service.embed_chunks(chunk_texts)
+            self.vector_store.update_document(
+                doc_id=target_id,
+                new_chunks=chunk_texts,
+                new_embeddings=embeddings
+            )
+            logger.info(f"Updated vector store for target: {target_id}")
+        except IOError as e:
+            logger.error(f"Error writing to target file {target_path}: {str(e)}")
+            raise
