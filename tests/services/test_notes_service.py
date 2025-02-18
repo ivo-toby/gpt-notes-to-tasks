@@ -16,8 +16,8 @@ SAMPLE_NOTES = """
 [2024-02-15 10:00:00 AM] Second note for day 1
 
 [2024-02-16 09:15:00 AM] First note for day 2
-[2024-02-16 14:30:00 PM] Second note for day 2
-[2024-02-16 17:45:00 PM] Third note for day 2
+[2024-02-16 02:30:00 PM] Second note for day 2
+[2024-02-16 05:45:00 PM] Third note for day 2
 
 [2024-02-17 11:00:00 AM] Note for day 3
 """
@@ -84,18 +84,31 @@ def test_extract_today_notes(notes_service):
 
 def test_extract_weekly_notes(notes_service):
     """Test extracting notes for a week period."""
-    # Test with specific date
+    # Test with specific date for full week
     week_id, notes = notes_service.extract_weekly_notes(SAMPLE_NOTES, "2024-02-15")
     assert "2024-W07" in week_id  # Feb 15, 2024 is in week 7
-    assert "First note for day 1" in notes
-    assert "First note for day 2" in notes
-    assert "Note for day 3" in notes
+    # Should include all notes from Feb 15 to Feb 21
+    assert "First note for day 1" in notes  # Feb 15
+    assert "First note for day 2" in notes  # Feb 16
+    assert "Note for day 3" in notes        # Feb 17
 
-    # Test with different days parameter
+    # Test with 2-day range
     week_id, notes = notes_service.extract_weekly_notes(SAMPLE_NOTES, "2024-02-15", days=2)
-    assert "First note for day 1" in notes
-    assert "First note for day 2" in notes
-    assert "Note for day 3" not in notes
+    # Should include notes from Feb 15 and Feb 16 only
+    assert "First note for day 1" in notes      # Feb 15
+    assert "Second note for day 1" in notes     # Feb 15
+    assert "First note for day 2" in notes      # Feb 16
+    assert "Second note for day 2" in notes     # Feb 16
+    assert "Third note for day 2" in notes      # Feb 16
+    assert "Note for day 3" not in notes        # Feb 17 - should not be included
+
+    # Test with 1-day range
+    week_id, notes = notes_service.extract_weekly_notes(SAMPLE_NOTES, "2024-02-15", days=1)
+    # Should only include notes from Feb 15
+    assert "First note for day 1" in notes      # Feb 15
+    assert "Second note for day 1" in notes     # Feb 15
+    assert "First note for day 2" not in notes  # Feb 16 - should not be included
+    assert "Note for day 3" not in notes        # Feb 17 - should not be included
 
     # Test with date having no notes
     week_id, notes = notes_service.extract_weekly_notes(SAMPLE_NOTES, "2024-03-01")

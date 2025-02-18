@@ -106,10 +106,11 @@ class NotesService:
             date_str = get_date_str()
 
         date_obj = datetime.strptime(date_str, "%Y-%m-%d")
-        start_of_week = date_obj - timedelta(days=date_obj.weekday())
-        end_of_week = start_of_week + timedelta(days=6)
+        start_date = date_obj.replace(hour=0, minute=0, second=0)  # Start at beginning of day
+        end_date = (start_date + timedelta(days=days-1)).replace(hour=23, minute=59, second=59)  # End at end of last day
 
-        iso_year, iso_week, _ = start_of_week.isocalendar()
+        # Get week identifier based on the start date
+        iso_year, iso_week, _ = start_date.isocalendar()
         week_identifier = f"{iso_year}-W{iso_week:02d}"
 
         pattern = r"\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [AP]M)\] (.*?)(?=\[\d{4}-\d{2}-\d{2}|\Z)"
@@ -117,7 +118,7 @@ class NotesService:
         for match in re.finditer(pattern, markdown, re.DOTALL):
             timestamp, note = match.groups()
             note_date = datetime.strptime(timestamp, "%Y-%m-%d %I:%M:%S %p")
-            if start_of_week <= note_date <= end_of_week:
+            if start_date <= note_date <= end_date:
                 notes.append(f"{timestamp}: {note.strip()}")
 
         return week_identifier, "\n".join(notes)
