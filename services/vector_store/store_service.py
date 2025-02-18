@@ -481,13 +481,16 @@ class VectorStoreService:
 
             # Add new chunks and update metadata
             if metadata is None:
-                # Preserve existing metadata if not provided
-                existing_meta = self.metadata_collection.get(
-                    ids=[doc_id], include=["metadatas"]
-                )
-                if existing_meta["ids"]:
-                    metadata = existing_meta["metadatas"][0]
-                else:
+                try:
+                    # Preserve existing metadata if not provided
+                    existing_meta = self.metadata_collection.get(
+                        ids=[doc_id], include=["metadatas"]
+                    )
+                    metadata = (existing_meta.get("metadatas", [{}])[0] 
+                              if existing_meta and existing_meta.get("ids") 
+                              else {})
+                except Exception as e:
+                    logger.warning(f"Error retrieving existing metadata for {doc_id}: {str(e)}")
                     metadata = {}
 
             # Update modification time
