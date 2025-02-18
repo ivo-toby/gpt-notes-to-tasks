@@ -511,6 +511,10 @@ class VectorStoreService:
 
         links = []
 
+        # Handle text being a dictionary with content
+        if isinstance(text, dict) and "content" in text:
+            text = text["content"]
+
         # Match [[link]] and [[link|alias]] formats
         wiki_pattern = r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]"
 
@@ -534,6 +538,10 @@ class VectorStoreService:
         import re
 
         refs = []
+
+        # Handle text being a dictionary with content
+        if isinstance(text, dict) and "content" in text:
+            text = text["content"]
 
         # Match Markdown links [text](url)
         link_pattern = r"\[([^\]]+)\]\(([^)]+)\)"
