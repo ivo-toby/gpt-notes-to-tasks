@@ -433,15 +433,41 @@ class VectorStoreService:
             new_embeddings: New list of embedding vectors
             metadata: Optional new metadata
         """
-        # Remove existing chunks for this document
-        self.collections["notes"].delete(where={"doc_id": doc_id})
+        try:
+            # Remove existing chunks for this document
+            self._retry_operation(
+                self.collections["notes"].delete,
+                where={"doc_id": doc_id}
+            )
 
-        # Remove existing link relationships
-        self.collections["links"].delete(where={"source_id": doc_id})
+            # Remove existing link relationships
+            self._retry_operation(
+                self.collections["links"].delete,
+                where={"source_id": doc_id}
+            )
 
-        # Add new chunks
-        self.add_document(doc_id, new_chunks, new_embeddings, metadata)
-        logger.info(f"Updated document {doc_id} with {len(new_chunks)} chunks")
+            # Add new chunks and update metadata
+            if metadata is None:
+                # Preserve existing metadata if not provided
+                existing_meta = self.metadata_collection.get(
+                    ids=[doc_id],
+                    include=["metadatas"]
+                )
+                if existing_meta["ids"]:
+                    metadata = existing_meta["metadatas"][0]
+                else:
+                    metadata = {}
+            
+            # Update modification time
+            metadata["modified_time"] = time.time()
+
+            # Add new chunks
+            self.add_document(doc_id, new_chunks, new_embeddings, metadata)
+            logger.info(f"Updated document {doc_id} with {len(new_chunks)} chunks")
+
+        except Exception as e:
+            logger.error(f"Error updating document {doc_id}: {str(e)}")
+            raise
 
     def _extract_wiki_links(self, text: str) -> List[Dict[str, str]]:
         """
