@@ -8,7 +8,7 @@ including daily notes, weekly notes, and meeting notes.
 import os
 import re
 from datetime import datetime, timedelta
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 from utils.date_utils import get_date_str
 
@@ -48,7 +48,9 @@ class NotesService:
         except FileNotFoundError:
             raise FileNotFoundError(f"Notes file not found: {expanded_note_file}")
         except PermissionError:
-            raise PermissionError(f"Permission denied accessing file: {expanded_note_file}")
+            raise PermissionError(
+                f"Permission denied accessing file: {expanded_note_file}"
+            )
 
     def extract_today_notes(self, notes: str, today_str: Optional[str] = None) -> str:
         """
@@ -112,7 +114,9 @@ class NotesService:
 
         return week_identifier, "\n".join(notes)
 
-    def save_meeting_notes(self, meeting_data: dict, output_dir: str = "MeetingNotes") -> None:
+    def save_meeting_notes(
+        self, meeting_data: dict, output_dir: str = "MeetingNotes"
+    ) -> None:
         """
         Save meeting notes to a markdown file.
 

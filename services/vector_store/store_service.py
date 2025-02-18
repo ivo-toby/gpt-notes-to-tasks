@@ -19,7 +19,9 @@ RETRY_DELAY = 1  # seconds
 class VectorStoreService:
     """Manages document storage and retrieval using ChromaDB."""
 
-    def __init__(self, config: Dict[str, Any], chunking_service=None, embedding_service=None):
+    def __init__(
+        self, config: Dict[str, Any], chunking_service=None, embedding_service=None
+    ):
         """
         Initialize the vector store service.
 
@@ -44,7 +46,7 @@ class VectorStoreService:
         # Initialize system metadata collection
         self.system_collection = self.client.get_or_create_collection(
             name="system",
-            metadata={"description": "System-level metadata and tracking"}
+            metadata={"description": "System-level metadata and tracking"},
         )
 
         # Create metadata collection for tracking document updates
@@ -78,8 +80,7 @@ class VectorStoreService:
         """Get the timestamp of the last update operation."""
         try:
             results = self.system_collection.get(
-                ids=["last_update"],
-                include=["metadatas"]
+                ids=["last_update"], include=["metadatas"]
             )
             if results["ids"]:
                 return float(results["metadatas"][0].get("timestamp", 0))
@@ -96,7 +97,7 @@ class VectorStoreService:
                 ids=["last_update"],
                 metadatas=[{"timestamp": str(timestamp)}],
                 embeddings=[[1.0] * 1536],
-                documents=[""]
+                documents=[""],
             )
         except Exception as e:
             logger.error(f"Error setting last update time: {str(e)}")
@@ -436,28 +437,25 @@ class VectorStoreService:
         try:
             # Remove existing chunks for this document
             self._retry_operation(
-                self.collections["notes"].delete,
-                where={"doc_id": doc_id}
+                self.collections["notes"].delete, where={"doc_id": doc_id}
             )
 
             # Remove existing link relationships
             self._retry_operation(
-                self.collections["links"].delete,
-                where={"source_id": doc_id}
+                self.collections["links"].delete, where={"source_id": doc_id}
             )
 
             # Add new chunks and update metadata
             if metadata is None:
                 # Preserve existing metadata if not provided
                 existing_meta = self.metadata_collection.get(
-                    ids=[doc_id],
-                    include=["metadatas"]
+                    ids=[doc_id], include=["metadatas"]
                 )
                 if existing_meta["ids"]:
                     metadata = existing_meta["metadatas"][0]
                 else:
                     metadata = {}
-            
+
             # Update modification time
             metadata["modified_time"] = time.time()
 

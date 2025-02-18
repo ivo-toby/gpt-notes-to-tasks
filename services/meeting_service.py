@@ -49,7 +49,7 @@ class MeetingService:
             return
 
         meeting_notes = self.openai_service.generate_meeting_notes(today_notes)
-        
+
         if not dry_run:
             for meeting in meeting_notes.get("meetings", []):
                 self._save_meeting_notes(meeting)
@@ -72,11 +72,13 @@ class MeetingService:
         """
         output_dir = output_dir or self.config["meeting_notes_output_dir"]
         date_str = meeting_data.get("date", datetime.now().strftime("%Y-%m-%d"))
-        subject = meeting_data.get("meeting_subject", "meeting").replace(" ", "_").lower()
+        subject = (
+            meeting_data.get("meeting_subject", "meeting").replace(" ", "_").lower()
+        )
         file_name = f"{date_str}_{subject}"
 
         content = create_meeting_notes_content(meeting_data)
-        
+
         output_dir = create_output_dir(os.path.expanduser(f"{output_dir}"))
         output_file = os.path.join(output_dir, f"{file_name}.md")
 

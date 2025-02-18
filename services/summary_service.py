@@ -4,13 +4,13 @@ Summary service for processing daily and weekly notes.
 This module handles the generation and storage of note summaries.
 """
 
-import os
 import fnmatch
+import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
-from services.openai_service import OpenAIService
 from services.notes_service import NotesService
+from services.openai_service import OpenAIService
 from services.reminder_service import ReminderService
 from utils.date_utils import get_date_str
 from utils.file_handler import create_output_dir, write_summary_to_file
@@ -39,64 +39,74 @@ class SummaryService:
             List[Dict[str, str]]: List of notes with their metadata
         """
         entries = []
-        notes_dir = os.path.expanduser(self.config.get('notes_base_dir', '~/Documents/notes'))
-        exclude_patterns = self.config.get('knowledge_base', {}).get('exclude_patterns', [])
-        
+        notes_dir = os.path.expanduser(
+            self.config.get("notes_base_dir", "~/Documents/notes")
+        )
+        exclude_patterns = self.config.get("knowledge_base", {}).get(
+            "exclude_patterns", []
+        )
+
         def should_exclude(path: str) -> bool:
             """Check if path matches any exclude pattern."""
             rel_path = os.path.relpath(path, notes_dir)
-            return any(fnmatch.fnmatch(rel_path, pattern) for pattern in exclude_patterns)
+            return any(
+                fnmatch.fnmatch(rel_path, pattern) for pattern in exclude_patterns
+            )
 
         def get_note_type(filepath: str) -> str:
             """Determine the type of note based on its location and content."""
-            if 'daily' in filepath:
-                return 'daily'
-            elif 'Weekly' in filepath:
-                return 'weekly'
-            elif 'meetingnotes' in filepath:
-                return 'meeting'
-            elif 'learnings' in filepath:
-                return 'learning'
-            return 'note'  # default type
+            if "daily" in filepath:
+                return "daily"
+            elif "Weekly" in filepath:
+                return "weekly"
+            elif "meetingnotes" in filepath:
+                return "meeting"
+            elif "learnings" in filepath:
+                return "learning"
+            return "note"  # default type
 
         # Recursively walk through all directories
         for root, dirs, files in os.walk(notes_dir):
             # Skip excluded directories
             dirs[:] = [d for d in dirs if not should_exclude(os.path.join(root, d))]
-            
+
             for file in files:
-                if not file.endswith('.md') or should_exclude(os.path.join(root, file)):
+                if not file.endswith(".md") or should_exclude(os.path.join(root, file)):
                     continue
 
                 filepath = os.path.join(root, file)
                 rel_path = os.path.relpath(filepath, notes_dir)
-                
+
                 try:
-                    with open(filepath, 'r', encoding='utf-8') as f:
+                    with open(filepath, "r", encoding="utf-8") as f:
                         content = f.read()
-                        
+
                     # Try to extract date from filename or content
                     date = None
-                    if file.startswith('20') and len(file) >= 10:  # Filename like 2024-02-16
+                    if (
+                        file.startswith("20") and len(file) >= 10
+                    ):  # Filename like 2024-02-16
                         date = file[:10]
                     else:
                         # Look for date in first line of content
-                        first_line = content.split('\n')[0]
-                        if first_line.startswith('[20'):  # [2024-02-16
+                        first_line = content.split("\n")[0]
+                        if first_line.startswith("[20"):  # [2024-02-16
                             date = first_line[1:11]
-                        
+
                     note_type = get_note_type(filepath)
-                    
-                    entries.append({
-                        'id': rel_path,  # Use relative path as ID
-                        'content': content,
-                        'date': date,
-                        'source': rel_path,
-                        'type': note_type,
-                        'filename': file,
-                        'path': filepath,
-                        'modified_time': os.path.getmtime(filepath)
-                    })
+
+                    entries.append(
+                        {
+                            "id": rel_path,  # Use relative path as ID
+                            "content": content,
+                            "date": date,
+                            "source": rel_path,
+                            "type": note_type,
+                            "filename": file,
+                            "path": filepath,
+                            "modified_time": os.path.getmtime(filepath),
+                        }
+                    )
                 except Exception as e:
                     print(f"Error processing file {filepath}: {str(e)}")
                     continue
@@ -104,8 +114,11 @@ class SummaryService:
         return entries
 
     def process_daily_notes(
-        self, date_str: Optional[str] = None, dry_run: bool = False,
-        skip_reminders: bool = False, replace_summary: bool = False
+        self,
+        date_str: Optional[str] = None,
+        dry_run: bool = False,
+        skip_reminders: bool = False,
+        replace_summary: bool = False,
     ) -> None:
         """
         Process daily notes to generate summaries and extract tasks.
@@ -142,8 +155,10 @@ class SummaryService:
             )
 
     def process_weekly_notes(
-        self, date_str: Optional[str] = None, dry_run: bool = False,
-        replace_summary: bool = False
+        self,
+        date_str: Optional[str] = None,
+        dry_run: bool = False,
+        replace_summary: bool = False,
     ) -> None:
         """
         Process and generate weekly note summaries.
@@ -171,9 +186,7 @@ class SummaryService:
                 weekly_summary, weekly_notes, replace_summary, date_str
             )
 
-    def _display_results(
-        self, summary: str, tasks: List[str], tags: List[str]
-    ) -> None:
+    def _display_results(self, summary: str, tasks: List[str], tags: List[str]) -> None:
         """Display the processed results to the console."""
         print("Summary:")
         print(summary)
@@ -189,8 +202,13 @@ class SummaryService:
             ReminderService.add_to_reminders(task)
 
     def _write_daily_summary(
-        self, summary: str, tasks: List[str], tags: List[str],
-        today_notes: str, replace_summary: bool, today_str: Optional[str]
+        self,
+        summary: str,
+        tasks: List[str],
+        tags: List[str],
+        today_notes: str,
+        replace_summary: bool,
+        today_str: Optional[str],
     ) -> None:
         """Write the daily summary to a file."""
         if today_str is not None:
@@ -227,14 +245,15 @@ class SummaryService:
         write_summary_to_file(output_file, content)
 
     def _write_weekly_summary(
-        self, weekly_summary: str, weekly_notes: str,
-        replace_summary: bool, date_str: Optional[str] = None
+        self,
+        weekly_summary: str,
+        weekly_notes: str,
+        replace_summary: bool,
+        date_str: Optional[str] = None,
     ) -> None:
         """Write the weekly summary to a file."""
         current_date = (
-            datetime.strptime(date_str, "%Y-%m-%d")
-            if date_str
-            else datetime.now()
+            datetime.strptime(date_str, "%Y-%m-%d") if date_str else datetime.now()
         )
 
         start_date = current_date - timedelta(days=current_date.weekday())

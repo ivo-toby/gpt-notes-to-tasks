@@ -17,13 +17,10 @@ def setup_argparser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Note Summarizer and Knowledge Base Manager"
     )
-    
+
     # Basic arguments
     parser.add_argument(
-        "--config", 
-        type=str, 
-        default="config.yaml", 
-        help="Path to configuration file"
+        "--config", type=str, default="config.yaml", help="Path to configuration file"
     )
     parser.add_argument(
         "--dry-run",
@@ -32,16 +29,18 @@ def setup_argparser() -> argparse.ArgumentParser:
     )
 
     # Create subparsers for different command groups
-    subparsers = parser.add_subparsers(dest='command', help='Command to execute')
+    subparsers = parser.add_subparsers(dest="command", help="Command to execute")
 
     # Notes processing commands
-    notes_parser = subparsers.add_parser('notes', help='Process daily and weekly notes')
+    notes_parser = subparsers.add_parser("notes", help="Process daily and weekly notes")
     notes_parser.add_argument(
         "--date",
         type=str,
         help="Date to fetch notes from (or start date for weekly notes)",
     )
-    notes_parser.add_argument("--weekly", action="store_true", help="Process weekly notes")
+    notes_parser.add_argument(
+        "--weekly", action="store_true", help="Process weekly notes"
+    )
     notes_parser.add_argument(
         "--skip-reminders", action="store_true", help="Do not create reminders"
     )
@@ -56,89 +55,82 @@ def setup_argparser() -> argparse.ArgumentParser:
         help="Generate and save meeting notes",
     )
     notes_parser.add_argument(
-        "--process-learnings", 
-        action="store_true", 
-        help="Process new learnings"
+        "--process-learnings", action="store_true", help="Process new learnings"
     )
 
     # Vector store commands
-    kb_parser = subparsers.add_parser('kb', help='Knowledge base operations')
+    kb_parser = subparsers.add_parser("kb", help="Knowledge base operations")
     kb_parser.add_argument(
         "--reindex",
         action="store_true",
-        help="Force reindex of all notes in the vector store"
+        help="Force reindex of all notes in the vector store",
     )
     kb_parser.add_argument(
         "--update",
         action="store_true",
-        help="Update only modified notes in the vector store (faster than full reindex)"
+        help="Update only modified notes in the vector store (faster than full reindex)",
     )
     kb_parser.add_argument(
-        "--query",
-        type=str,
-        help="Search for similar content in the vector store"
+        "--query", type=str, help="Search for similar content in the vector store"
     )
     kb_parser.add_argument(
         "--limit",
         type=int,
         default=5,
-        help="Maximum number of results to return for vector store queries"
+        help="Maximum number of results to return for vector store queries",
     )
     kb_parser.add_argument(
         "--show-connections",
         type=str,
         metavar="NOTE_PATH",
-        help="Show connections for a specific note"
+        help="Show connections for a specific note",
     )
     kb_parser.add_argument(
-        "--find-by-tag",
-        type=str,
-        metavar="TAG",
-        help="Find notes with specific tag"
+        "--find-by-tag", type=str, metavar="TAG", help="Find notes with specific tag"
     )
     kb_parser.add_argument(
         "--find-by-date",
         type=str,
         metavar="DATE",
-        help="Find notes from specific date (YYYY-MM-DD)"
+        help="Find notes from specific date (YYYY-MM-DD)",
     )
     kb_parser.add_argument(
         "--note-structure",
         type=str,
         metavar="NOTE_PATH",
-        help="Display semantic structure of a note"
+        help="Display semantic structure of a note",
     )
     kb_parser.add_argument(
         "--analyze-links",
         type=str,
         metavar="NOTE_PATH",
-        help="Analyze links and relationships for a note"
+        help="Analyze links and relationships for a note",
     )
     kb_parser.add_argument(
         "--auto-link",
         action="store_true",
-        help="Automatically add suggested links without prompting"
+        help="Automatically add suggested links without prompting",
     )
     kb_parser.add_argument(
         "--analyze-all",
         action="store_true",
-        help="Analyze and auto-link all notes in the knowledge base"
+        help="Analyze and auto-link all notes in the knowledge base",
     )
     kb_parser.add_argument(
         "--analyze-updated",
         action="store_true",
-        help="Analyze and auto-link only recently modified notes"
+        help="Analyze and auto-link only recently modified notes",
     )
     kb_parser.add_argument(
         "--note-type",
         type=str,
-        choices=['daily', 'weekly', 'meeting', 'learning', 'note'],
-        help="Filter results by note type"
+        choices=["daily", "weekly", "meeting", "learning", "note"],
+        help="Filter results by note type",
     )
     kb_parser.add_argument(
         "--graph",
         action="store_true",
-        help="Output note connections in Mermaid graph format"
+        help="Output note connections in Mermaid graph format",
     )
 
     return parser

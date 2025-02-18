@@ -5,7 +5,6 @@ This module provides functionality to interact with the macOS Reminders app,
 allowing the addition of tasks to the default Work list.
 """
 
-from typing import Optional
 import applescript
 
 
@@ -37,7 +36,7 @@ class ReminderService:
                 print("Task not added to reminders.")
                 return False
 
-            script = f'''
+            script = f"""
             tell application "Reminders"
                 try
                     set mylist to list "Work"
@@ -49,7 +48,7 @@ class ReminderService:
                     return false
                 end try
             end tell
-            '''
+            """
 
             result = applescript.run(script)
             if result:

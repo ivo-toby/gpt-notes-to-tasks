@@ -6,9 +6,10 @@ handling various text generation tasks including summarization,
 meeting notes extraction, and learning processing.
 """
 
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional
+
 from openai import OpenAI
-from openai.types.chat import ChatCompletion, ChatCompletionMessage, ChatCompletionMessageParam
+from openai.types.chat import ChatCompletionMessage, ChatCompletionMessageParam
 
 
 class OpenAIService:
@@ -78,7 +79,10 @@ class OpenAIService:
                 max_tokens=50,
             )
             if response.choices[0].message.content:
-                return [tag.strip() for tag in response.choices[0].message.content.split(",")]
+                return [
+                    tag.strip()
+                    for tag in response.choices[0].message.content.split(",")
+                ]
             return []
         except Exception as e:
             print(f"Error generating tags: {e}")
@@ -182,6 +186,7 @@ class OpenAIService:
         if response:
             if response and response.function_call and response.function_call.arguments:
                 import json
+
                 return json.loads(response.function_call.arguments)
             return None
 

@@ -2,9 +2,11 @@
 
 import logging
 from typing import Any, Dict, List
+
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 logger = logging.getLogger(__name__)
+
 
 class ChunkingService:
     """Manages the chunking of documents."""
@@ -24,7 +26,7 @@ class ChunkingService:
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,
             length_function=len,
-            is_separator_regex=False
+            is_separator_regex=False,
         )
 
     def chunk_document(
@@ -33,7 +35,7 @@ class ChunkingService:
         doc_type: str = "note",
         title: str = "",
         tags: List[str] = None,
-        frontmatter: Dict[str, Any] = None
+        frontmatter: Dict[str, Any] = None,
     ) -> List[Dict[str, Any]]:
         """
         Split a document into chunks using LangChain's RecursiveCharacterTextSplitter.
@@ -68,24 +70,21 @@ class ChunkingService:
                         if key not in ["content", "title", "tags"]:
                             chunk_metadata[f"frontmatter_{key}"] = value
 
-                result.append({
-                    "content": chunk,
-                    "metadata": chunk_metadata
-                })
+                result.append({"content": chunk, "metadata": chunk_metadata})
 
             return result
 
         except Exception as e:
             logger.error(f"Error chunking document: {str(e)}")
             # Fallback: return entire content as single chunk
-            return [{
-                "content": content,
-                "metadata": {
-                    "title": title or "Single chunk",
-                    "char_count": len(content),
-                    "doc_type": doc_type,
-                    "tags": tags or [],
+            return [
+                {
+                    "content": content,
+                    "metadata": {
+                        "title": title or "Single chunk",
+                        "char_count": len(content),
+                        "doc_type": doc_type,
+                        "tags": tags or [],
+                    },
                 }
-            }]
-
-
+            ]

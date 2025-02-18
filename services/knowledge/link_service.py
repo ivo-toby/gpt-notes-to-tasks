@@ -3,7 +3,7 @@
 import logging
 import os
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +21,12 @@ class LinkService:
         self.vector_store = vector_store
         self.chunking_service = chunking_service or vector_store.chunking_service
         self.embedding_service = embedding_service or vector_store.embedding_service
-        self.base_path = os.path.expanduser(vector_store.config.get('path', '~/Documents/notes'))
-        self.base_path = os.path.dirname(self.base_path)  # Get parent directory of .vector_store
+        self.base_path = os.path.expanduser(
+            vector_store.config.get("path", "~/Documents/notes")
+        )
+        self.base_path = os.path.dirname(
+            self.base_path
+        )  # Get parent directory of .vector_store
 
     def analyze_relationships(self, note_id: str) -> Dict[str, Any]:
         """
@@ -207,11 +211,11 @@ class LinkService:
     def _has_wiki_link(self, content: str, target: str) -> bool:
         """
         Check if content already contains a wiki link to target.
-        
+
         Args:
             content: The note content to check
             target: The target note ID to look for
-            
+
         Returns:
             bool: True if the link already exists
         """
@@ -220,7 +224,7 @@ class LinkService:
         if re.search(exact_pattern, content):
             logger.debug(f"Found exact wiki link match for {target}")
             return True
-            
+
         # Check for link in any section
         sections = ["## Related", "## Links", "## References", "## Backlinks"]
         for section in sections:
@@ -229,13 +233,13 @@ class LinkService:
                 if target in section_content:
                     logger.debug(f"Found {target} in {section} section")
                     return True
-                    
+
         # Check for any mention of the target file name
-        base_name = os.path.basename(target).replace('.md', '')
+        base_name = os.path.basename(target).replace(".md", "")
         if f"[[{base_name}" in content:
             logger.debug(f"Found mention of {base_name} in content")
             return True
-            
+
         return False
 
     def _insert_wiki_link(self, content: str, new_link: str) -> str:

@@ -6,22 +6,24 @@ meeting notes and learning entries. It interfaces with various services to
 generate summaries, extract tasks, and manage reminders.
 """
 
+import logging
 import os
 import time
 from datetime import datetime
-from typing import Dict, Any
+from typing import Any, Dict
+
+from services.knowledge.link_service import LinkService
 from services.learning_service import LearningService
-from services.summary_service import SummaryService
 from services.meeting_service import MeetingService
 from services.openai_service import OpenAIService
-from services.vector_store import VectorStoreService, EmbeddingService, ChunkingService
-from services.knowledge.link_service import LinkService
-from utils.config_loader import load_config
+from services.summary_service import SummaryService
+from services.vector_store import ChunkingService, EmbeddingService, VectorStoreService
 from utils.cli import setup_argparser
-import logging
+from utils.config_loader import load_config
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 def process_daily_notes(cfg, cli_args):
     """Process daily notes to generate summaries and extract tasks."""
@@ -30,8 +32,9 @@ def process_daily_notes(cfg, cli_args):
         date_str=cli_args.date,
         dry_run=cli_args.dry_run,
         skip_reminders=cli_args.skip_reminders,
-        replace_summary=cli_args.replace_summary
+        replace_summary=cli_args.replace_summary,
     )
+
 
 def process_weekly_notes(cfg, cli_args):
     """Process and generate weekly note summaries."""
@@ -39,16 +42,17 @@ def process_weekly_notes(cfg, cli_args):
     summary_service.process_weekly_notes(
         date_str=cli_args.date,
         dry_run=cli_args.dry_run,
-        replace_summary=cli_args.replace_summary
+        replace_summary=cli_args.replace_summary,
     )
+
 
 def process_meeting_notes(cfg, cli_args):
     """Process daily notes to generate structured meeting notes."""
     meeting_service = MeetingService(cfg)
     meeting_service.process_meeting_notes(
-        date_str=cli_args.date,
-        dry_run=cli_args.dry_run
+        date_str=cli_args.date, dry_run=cli_args.dry_run
     )
+
 
 def process_new_learnings(cfg, cli_args):
     """Process and extract new learnings from notes."""
@@ -58,6 +62,7 @@ def process_new_learnings(cfg, cli_args):
     learning_service.process_new_learnings(
         OpenAIService(api_key=cfg["api_key"], model=cfg["model"])
     )
+
 
 def process_knowledge_base(cfg, cli_args):
     """Handle knowledge base operations."""
@@ -74,9 +79,14 @@ def process_knowledge_base(cfg, cli_args):
                 notes = summary_service.get_all_notes()
             else:
                 last_update = vector_store.get_last_update_time()
-                logger.info(f"Checking for notes modified since {datetime.fromtimestamp(last_update)}")
-                notes = [note for note in summary_service.get_all_notes() 
-                        if note.get('modified_time', 0) > last_update]
+                logger.info(
+                    f"Checking for notes modified since {datetime.fromtimestamp(last_update)}"
+                )
+                notes = [
+                    note
+                    for note in summary_service.get_all_notes()
+                    if note.get("modified_time", 0) > last_update
+                ]
                 if not notes:
                     logger.info("No notes need updating")
                     return
@@ -87,27 +97,30 @@ def process_knowledge_base(cfg, cli_args):
                 for note in notes:
                     logger.info(f"Processing note: {note['id']}")
                     chunks = chunking_service.chunk_document(
-                        note['content'],
-                        doc_type=note.get('type', 'note')
+                        note["content"], doc_type=note.get("type", "note")
                     )
                     if not chunks:
                         logger.warning(f"No chunks generated for note: {note['id']}")
                         continue
-                        
-                    chunk_texts = [chunk['content'] for chunk in chunks]
-                    logger.info(f"Generating embeddings for {len(chunk_texts)} chunks...")
+
+                    chunk_texts = [chunk["content"] for chunk in chunks]
+                    logger.info(
+                        f"Generating embeddings for {len(chunk_texts)} chunks..."
+                    )
                     embeddings = embedding_service.embed_chunks(chunk_texts)
                     logger.info("Embeddings generated successfully")
                     vector_store.add_document(
-                        doc_id=note['id'],
+                        doc_id=note["id"],
                         chunks=chunk_texts,
                         embeddings=embeddings,
-                        metadata=note
+                        metadata=note,
                     )
-                
+
                 if cli_args.update:
                     vector_store.set_last_update_time(current_time)
-                    logger.info(f"Updated last_update timestamp to {datetime.fromtimestamp(current_time)}")
+                    logger.info(
+                        f"Updated last_update timestamp to {datetime.fromtimestamp(current_time)}"
+                    )
             else:
                 logger.info("Dry run - no changes made")
 
@@ -119,7 +132,9 @@ def process_knowledge_base(cfg, cli_args):
                 query_embedding=query_embedding,
                 limit=cli_args.limit,
                 doc_type=cli_args.note_type,
-                threshold=cfg.get('vector_store', {}).get('similarity_threshold', 0.3)  # Lower default threshold
+                threshold=cfg.get("vector_store", {}).get(
+                    "similarity_threshold", 0.3
+                ),  # Lower default threshold
             )
             if not results:
                 logger.info("No matching results found")
@@ -141,9 +156,9 @@ def process_knowledge_base(cfg, cli_args):
             results = vector_store.find_similar(
                 query_embedding=query_embedding,
                 limit=cli_args.limit,
-                threshold=0.5  # Lower threshold for tag search
+                threshold=0.5,  # Lower threshold for tag search
             )
-            _display_search_results(results, focus='tags')
+            _display_search_results(results, focus="tags")
 
         elif cli_args.find_by_date:
             try:
@@ -153,9 +168,9 @@ def process_knowledge_base(cfg, cli_args):
                 results = vector_store.find_similar(
                     query_embedding=query_embedding,
                     limit=cli_args.limit,
-                    threshold=0.5  # Lower threshold for date search
+                    threshold=0.5,  # Lower threshold for date search
                 )
-                _display_search_results(results, focus='dates')
+                _display_search_results(results, focus="dates")
             except ValueError:
                 logger.error("Invalid date format. Please use YYYY-MM-DD")
 
@@ -163,9 +178,14 @@ def process_knowledge_base(cfg, cli_args):
             logger.info("Analyzing all notes for potential links...")
             if cli_args.analyze_updated:
                 last_update = vector_store.get_last_update_time()
-                logger.info(f"Checking for notes modified since {datetime.fromtimestamp(last_update)}")
-                notes = [note for note in summary_service.get_all_notes() 
-                        if note.get('modified_time', 0) > last_update]
+                logger.info(
+                    f"Checking for notes modified since {datetime.fromtimestamp(last_update)}"
+                )
+                notes = [
+                    note
+                    for note in summary_service.get_all_notes()
+                    if note.get("modified_time", 0) > last_update
+                ]
                 if not notes:
                     logger.info("No notes need updating")
                     return
@@ -174,20 +194,20 @@ def process_knowledge_base(cfg, cli_args):
                 notes = summary_service.get_all_notes()
             for note in notes:
                 logger.info(f"Analyzing links for: {note['path']}")
-                analysis = link_service.analyze_relationships(note['path'])
-                _display_link_analysis(note['path'], analysis)
+                analysis = link_service.analyze_relationships(note["path"])
+                _display_link_analysis(note["path"], analysis)
 
                 # Update links based on suggestions
-                if not cli_args.dry_run and analysis['suggested_links']:
+                if not cli_args.dry_run and analysis["suggested_links"]:
                     links_to_add = [
                         {
-                            'add_wiki_link': True,
-                            'target_id': suggestion['note_id'],
-                            'alias': None  # Let the service generate an alias
+                            "add_wiki_link": True,
+                            "target_id": suggestion["note_id"],
+                            "alias": None,  # Let the service generate an alias
                         }
-                        for suggestion in analysis['suggested_links']
+                        for suggestion in analysis["suggested_links"]
                     ]
-                    link_service.update_obsidian_links(note['path'], links_to_add)
+                    link_service.update_obsidian_links(note["path"], links_to_add)
                     logger.info(f"Links updated successfully for: {note['path']}")
 
         elif cli_args.analyze_links:
@@ -197,14 +217,14 @@ def process_knowledge_base(cfg, cli_args):
             _display_link_analysis(note_path, analysis)
 
             # Update links based on suggestions
-            if not cli_args.dry_run and analysis['suggested_links']:
+            if not cli_args.dry_run and analysis["suggested_links"]:
                 links_to_add = [
                     {
-                        'add_wiki_link': True,
-                        'target_id': suggestion['note_id'],
-                        'alias': None  # Let the service generate an alias
+                        "add_wiki_link": True,
+                        "target_id": suggestion["note_id"],
+                        "alias": None,  # Let the service generate an alias
                     }
-                    for suggestion in analysis['suggested_links']
+                    for suggestion in analysis["suggested_links"]
                 ]
                 link_service.update_obsidian_links(note_path, links_to_add)
                 logger.info("Links updated successfully")
@@ -212,11 +232,10 @@ def process_knowledge_base(cfg, cli_args):
         elif cli_args.note_structure:
             note_path = os.path.expanduser(cli_args.note_structure)
             try:
-                with open(note_path, 'r') as f:
+                with open(note_path, "r") as f:
                     content = f.read()
                 chunks = chunking_service.chunk_document(
-                    content,
-                    doc_type=cli_args.note_type or 'note'
+                    content, doc_type=cli_args.note_type or "note"
                 )
                 _display_note_structure(chunks)
             except FileNotFoundError:
@@ -226,17 +245,19 @@ def process_knowledge_base(cfg, cli_args):
         logger.error(f"Error processing knowledge base: {str(e)}")
         raise
 
+
 def _display_search_results(results, focus=None):
     """Display search results with optional focus on specific metadata."""
     print("\nSearch Results:")
     for i, result in enumerate(results, 1):
         print(f"\n{i}. Similarity: {result['similarity']:.2f}")
         print(f"Source: {result['metadata'].get('source', 'unknown')}")
-        if focus == 'tags' and 'tags' in result['metadata']:
+        if focus == "tags" and "tags" in result["metadata"]:
             print(f"Tags: {', '.join(result['metadata']['tags'])}")
-        if focus == 'dates' and 'dates' in result['metadata']:
+        if focus == "dates" and "dates" in result["metadata"]:
             print(f"Dates: {', '.join(result['metadata']['dates'])}")
         print(f"Content: {result['content'][:200]}...")
+
 
 def _display_connections(note_path, connections):
     """Display note connections in text format."""
@@ -245,50 +266,59 @@ def _display_connections(note_path, connections):
         print(f"\n- {conn['target_id']}")
         print(f"  Relationship: {conn['relationship']}")
         print(f"  Type: {conn['link_type']}")
-        if conn.get('context'):
+        if conn.get("context"):
             print(f"  Context: {conn['context'][:100]}...")
+
 
 def _display_connections_graph(note_path, connections):
     """Display note connections in Mermaid graph format."""
     print("\n```mermaid")
     print("graph TD")
-    source_id = os.path.basename(note_path).replace('.md', '')
+    source_id = os.path.basename(note_path).replace(".md", "")
     print(f"    {source_id}[{os.path.basename(note_path)}]")
-    
+
     for conn in connections:
-        target_id = os.path.basename(conn['target_id']).replace('.md', '')
-        print(f"    {source_id} -->|{conn['relationship']}| {target_id}[{os.path.basename(conn['target_id'])}]")
-    
+        target_id = os.path.basename(conn["target_id"]).replace(".md", "")
+        print(
+            f"    {source_id} -->|{conn['relationship']}| {target_id}[{os.path.basename(conn['target_id'])}]"
+        )
+
     print("```")
+
 
 def _display_link_analysis(note_path: str, analysis: Dict[str, Any]) -> None:
     """Display link analysis results."""
     print(f"\nLink Analysis for {note_path}:")
-    
+
     print("\nDirect Links:")
-    for link in analysis['direct_links']:
+    for link in analysis["direct_links"]:
         print(f"- {link['target_id']} ({link['relationship']})")
-        if link.get('context'):
+        if link.get("context"):
             print(f"  Context: {link['context'][:100]}...")
 
     print("\nBacklinks:")
-    for link in analysis['backlinks']:
+    for link in analysis["backlinks"]:
         print(f"- {link['source_id']} ({link['relationship']})")
-        if link.get('context'):
+        if link.get("context"):
             print(f"  Context: {link['context'][:100]}...")
 
     print("\nSemantic Relationships:")
-    for link in analysis['semantic_links']:
-        print(f"- {link['metadata'].get('doc_id', 'Unknown')} "
-              f"(similarity: {link['similarity']:.2f})")
+    for link in analysis["semantic_links"]:
+        print(
+            f"- {link['metadata'].get('doc_id', 'Unknown')} "
+            f"(similarity: {link['similarity']:.2f})"
+        )
         print(f"  Preview: {link['content'][:100]}...")
 
     print("\nSuggested Connections:")
-    for suggestion in analysis['suggested_links']:
-        print(f"- {suggestion['note_id']} "
-              f"(similarity: {suggestion['similarity']:.2f})")
+    for suggestion in analysis["suggested_links"]:
+        print(
+            f"- {suggestion['note_id']} "
+            f"(similarity: {suggestion['similarity']:.2f})"
+        )
         print(f"  Reason: {suggestion['reason']}")
         print(f"  Preview: {suggestion['preview']}")
+
 
 def _display_note_structure(chunks):
     """Display semantic structure of a note."""
@@ -296,12 +326,13 @@ def _display_note_structure(chunks):
     for i, chunk in enumerate(chunks, 1):
         print(f"\n{i}. {chunk['metadata']['title']}")
         print(f"   Type: {chunk['metadata'].get('doc_type', 'note')}")
-        if chunk['metadata'].get('tags'):
+        if chunk["metadata"].get("tags"):
             print(f"   Tags: {', '.join(chunk['metadata']['tags'])}")
-        if chunk['metadata'].get('dates'):
+        if chunk["metadata"].get("dates"):
             print(f"   Dates: {', '.join(chunk['metadata']['dates'])}")
         print(f"   Size: {chunk['metadata']['char_count']} characters")
         print(f"   Preview: {chunk['content'][:100]}...")
+
 
 if __name__ == "__main__":
     parser = setup_argparser()
@@ -309,7 +340,7 @@ if __name__ == "__main__":
 
     cfg = load_config(args.config)
 
-    if args.command == 'notes':
+    if args.command == "notes":
         if args.process_learnings:
             process_new_learnings(cfg, args)
         elif args.meetingnotes:
@@ -320,15 +351,15 @@ if __name__ == "__main__":
             process_daily_notes(cfg, args)
             process_meeting_notes(cfg, args)
             process_new_learnings(cfg, args)
-    elif args.command == 'kb':
+    elif args.command == "kb":
         process_knowledge_base(cfg, args)
     else:
         # Default behavior for backward compatibility
-        if hasattr(args, 'process_learnings') and args.process_learnings:
+        if hasattr(args, "process_learnings") and args.process_learnings:
             process_new_learnings(cfg, args)
-        elif hasattr(args, 'meetingnotes') and args.meetingnotes:
+        elif hasattr(args, "meetingnotes") and args.meetingnotes:
             process_meeting_notes(cfg, args)
-        elif hasattr(args, 'weekly') and args.weekly:
+        elif hasattr(args, "weekly") and args.weekly:
             process_weekly_notes(cfg, args)
         else:
             process_daily_notes(cfg, args)
