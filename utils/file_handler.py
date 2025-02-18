@@ -1,11 +1,12 @@
 """
-File handling utility functions.
+File handling utilities.
 
 This module provides functions for reading and writing files,
-and managing output directories with proper error handling.
+with support for home directory expansion and error handling.
 """
 
 import os
+from pathlib import Path
 
 
 def load_notes(filename: str) -> str:
@@ -16,25 +17,21 @@ def load_notes(filename: str) -> str:
         filename (str): Path to the file to read, supports ~ expansion
 
     Returns:
-        str: Contents of the file
-
-    Raises:
-        FileNotFoundError: If the file doesn't exist
-        PermissionError: If the file can't be accessed
+        str: Contents of the file, or empty string if file not found
     """
     expanded_filename = os.path.expanduser(filename)
     try:
         with open(expanded_filename, "r", encoding="utf-8") as file:
             return file.read()
     except FileNotFoundError:
-        raise FileNotFoundError(f"Notes file not found: {expanded_filename}")
+        return ""
     except PermissionError:
-        raise PermissionError(f"Permission denied accessing file: {expanded_filename}")
+        raise PermissionError(f"Permission denied reading file: {expanded_filename}")
 
 
 def write_summary_to_file(filename: str, content: str) -> None:
     """
-    Write content to a file.
+    Write content to a file, creating parent directories if needed.
 
     Args:
         filename (str): Path to the file to write, supports ~ expansion
@@ -46,6 +43,10 @@ def write_summary_to_file(filename: str, content: str) -> None:
     """
     expanded_filename = os.path.expanduser(filename)
     try:
+        # Create parent directories if they don't exist
+        Path(os.path.dirname(expanded_filename)).mkdir(parents=True, exist_ok=True)
+
+        # Write the content
         with open(expanded_filename, "w", encoding="utf-8") as file:
             file.write(content)
     except PermissionError:
@@ -70,7 +71,7 @@ def create_output_dir(output_dir: str) -> str:
     """
     expanded_dir = os.path.expanduser(output_dir)
     try:
-        os.makedirs(expanded_dir, exist_ok=True)
+        Path(expanded_dir).mkdir(parents=True, exist_ok=True)
         return expanded_dir
     except PermissionError:
         raise PermissionError(f"Permission denied creating directory: {expanded_dir}")
