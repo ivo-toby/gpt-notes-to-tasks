@@ -115,6 +115,11 @@ def setup_argparser() -> argparse.ArgumentParser:
         help="Analyze links and relationships for a note"
     )
     kb_parser.add_argument(
+        "--auto-link",
+        action="store_true",
+        help="Automatically add suggested links without prompting"
+    )
+    kb_parser.add_argument(
         "--note-type",
         type=str,
         choices=['daily', 'weekly', 'meeting', 'learning', 'note'],

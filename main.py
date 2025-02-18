@@ -165,6 +165,20 @@ def process_knowledge_base(cfg, cli_args):
             analysis = link_service.analyze_relationships(note_path)
             _display_link_analysis(note_path, analysis)
 
+            # Update links based on suggestions
+            if not cli_args.dry_run and analysis['suggested_links']:
+                if cli_args.auto_link or input("\nAdd suggested links to note? (y/N): ").lower() == 'y':
+                    links_to_add = [
+                        {
+                            'add_wiki_link': True,
+                            'target_id': suggestion['note_id'],
+                            'alias': None  # Let the service generate an alias
+                        }
+                        for suggestion in analysis['suggested_links']
+                    ]
+                    link_service.update_obsidian_links(note_path, links_to_add)
+                    logger.info("Links updated successfully")
+
         elif cli_args.note_structure:
             note_path = os.path.expanduser(cli_args.note_structure)
             try:
