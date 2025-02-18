@@ -128,8 +128,46 @@ The items extracted to action items will be added to Apple Reminders with a dead
 ## Prerequisites
 
 - Python 3.x
-- OpenAI API key
+- OpenAI API key (if using OpenAI embeddings)
 - Apple Reminders
+
+### Optional Dependencies (based on embedding model choice)
+
+For OpenAI embeddings (default):
+
+- OpenAI API key
+- `pip install openai`
+
+For HuggingFace models:
+
+- `pip install sentence-transformers`
+- CUDA-capable GPU (optional, for faster processing)
+
+For Cohere embeddings:
+
+- Cohere API key
+- `pip install cohere`
+
+For Ollama (local models):
+
+1. Install Ollama:
+   ```bash
+   # macOS/Linux
+   curl https://ollama.ai/install.sh | sh
+   ```
+2. Start the Ollama service:
+   ```bash
+   ollama serve
+   ```
+3. Pull your desired embedding model:
+
+   ```bash
+   # For general text embeddings
+   ollama pull nomic-embed-text
+
+   # For code-specific embeddings
+   ollama pull codellama
+   ```
 
 ## Installation
 
@@ -145,22 +183,121 @@ Here is a brief explanation of each configuration item:
 - `notes_base_dir`: Base directory containing all your notes. For example, `"~/Documents/notes"`.
 
 - `knowledge_base`: Settings for scanning and processing notes:
+
   ```yaml
-  exclude_patterns: 
-    - "*.excalidraw.md"  # Exclude Excalidraw files
-    - "templates/*"       # Exclude template directory
-    - ".obsidian/*"      # Exclude Obsidian config
-    - ".trash/*"         # Exclude trash
-    - ".git/*"           # Exclude git directory
+  exclude_patterns:
+    - "*.excalidraw.md" # Exclude Excalidraw files
+    - "templates/*" # Exclude template directory
+    - ".obsidian/*" # Exclude Obsidian config
+    - ".trash/*" # Exclude trash
+    - ".git/*" # Exclude git directory
   ```
 
 - `vector_store`: Configuration for the semantic knowledge base:
+
   - `path`: Location to store the vector database. For example, `"~/Documents/notes/.vector_store"`.
   - `chunk_size_min`: Minimum size of text chunks for semantic analysis (default: 50).
   - `chunk_size_max`: Maximum size of text chunks for semantic analysis (default: 500).
-  - `similarity_threshold`: Minimum similarity score for matching content (default: 0.85).
+  - `similarity_threshold`: Minimum similarity score for matching content. This value depends on your embedding model:
+    - For normalized embeddings (OpenAI, HuggingFace): Use 0.60-0.85 (higher = stricter matching)
+    - For distance-based embeddings (some Ollama models): Use negative values like -250.0 (less negative = stricter matching)
+  - `hnsw_config`: HNSW index settings for ChromaDB:
+    - `ef_construction`: Controls index build quality (default: 400)
+    - `ef_search`: Controls search quality (default: 200)
+    - `m`: Number of connections per element (default: 128)
+
+- `embeddings`: Configuration for text embedding models:
+  - `model_type`: Type of embedding model to use. Options:
+    - `"openai"`: OpenAI's embedding models (requires API key)
+    - `"huggingface"`: Local HuggingFace models
+    - `"huggingface_instruct"`: HuggingFace instruction-tuned models
+    - `"cohere"`: Cohere's embedding models (requires API key)
+    - `"ollama"`: Local Ollama models
+  - `model_name`: Name of the specific model to use (examples below)
+  - `batch_size`: Number of texts to embed at once (default: 100)
+  - `model_kwargs`: Optional model-specific settings:
+    - `device`: For HuggingFace models: "cpu" or "cuda"
+    - `normalize_embeddings`: Whether to normalize embeddings (default: true)
+  - `ollama_config`: Settings for Ollama models:
+    - `base_url`: Ollama API URL (default: "http://localhost:11434")
+    - `num_ctx`: Context window size (default: 512)
+    - `num_thread`: Number of threads to use (default: 4)
+
+Example configurations for different embedding models:
+
+```yaml
+# OpenAI (default, normalized embeddings)
+embeddings:
+  model_type: "openai"
+  model_name: "text-embedding-3-small"
+  batch_size: 100
+vector_store:
+  similarity_threshold: 0.60  # Higher = stricter matching
+search:
+  thresholds:
+    default: 0.60
+    tag_search: 0.50
+    date_search: 0.50
+
+# Ollama with mxbai-embed-large (distance-based)
+embeddings:
+  model_type: "ollama"
+  model_name: "mxbai-embed-large:latest"
+  batch_size: 100
+  ollama_config:
+    base_url: "http://localhost:11434"
+    num_ctx: 512
+    num_thread: 4
+vector_store:
+  similarity_threshold: -250.0  # Less negative = stricter matching
+search:
+  thresholds:
+    default: -250.0
+    tag_search: -300.0  # More lenient for tag searches
+    date_search: -300.0  # More lenient for date searches
+
+# Local HuggingFace model (normalized)
+embeddings:
+  model_type: "huggingface"
+  model_name: "sentence-transformers/all-mpnet-base-v2"
+  batch_size: 32
+  model_kwargs:
+    device: "cuda"
+    normalize_embeddings: true
+vector_store:
+  similarity_threshold: 0.70  # Adjust based on model performance
+```
+
+### Important Notes About Similarity Thresholds
+
+Different embedding models use different similarity metrics:
+
+1. **Normalized Embeddings** (OpenAI, most HuggingFace models):
+
+   - Use cosine similarity scores between 0 and 1
+   - Higher thresholds (e.g., 0.85) mean stricter matching
+   - Lower thresholds (e.g., 0.50) mean more lenient matching
+   - Common range: 0.60-0.85
+
+2. **Distance-Based Embeddings** (some Ollama models like mxbai-embed-large):
+   - Use negative distance scores (more negative = more different)
+   - Less negative thresholds (e.g., -200.0) mean stricter matching
+   - More negative thresholds (e.g., -300.0) mean more lenient matching
+   - Common range: -200.0 to -300.0
+
+When switching embedding models:
+
+1. Check if your model uses normalized or distance-based similarity
+2. Adjust thresholds accordingly in both `vector_store` and `search` settings
+3. Delete the existing vector store and reindex:
+   ```bash
+   rm -rf ~/Documents/notes/.vector_store
+   python main.py kb --reindex
+   ```
+4. Test with different threshold values to find the best balance for your content
 
 Plus the standard configuration for note processing:
+
 - `daily_notes_file`: Source file for daily notes
 - `daily_output_dir`: Directory for processed daily notes
 - `weekly_output_dir`: Directory for weekly summaries
@@ -169,6 +306,21 @@ Plus the standard configuration for note processing:
 - `model`: OpenAI model to use (e.g., "gpt-4")
 - `learnings_file`: Source file for learnings
 - `learnings_output_dir`: Directory for processed learnings
+
+## Important Note About Changing Embedding Models
+
+When changing the embedding model configuration, you must reindex your knowledge base to ensure consistency. Different models produce different embedding vectors, which are not compatible with each other. To reindex:
+
+1. Delete the existing vector store:
+
+   ```bash
+   rm -rf ~/Documents/notes/.vector_store  # Adjust path based on your config
+   ```
+
+2. Reindex your notes:
+   ```bash
+   python main.py kb --reindex
+   ```
 
 ## Usage
 

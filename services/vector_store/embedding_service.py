@@ -1,30 +1,75 @@
-"""Service for generating embeddings using OpenAI's API."""
+"""Service for generating embeddings using various embedding models through LangChain."""
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-import openai
+from langchain_community.embeddings import (
+    OpenAIEmbeddings,
+    HuggingFaceEmbeddings,
+    CohereEmbeddings,
+    HuggingFaceInstructEmbeddings,
+    OllamaEmbeddings,
+)
+from langchain_core.embeddings import Embeddings
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
 
 class EmbeddingService:
-    """Manages the generation of embeddings for text content."""
+    """Manages the generation of embeddings for text content using various models."""
 
     def __init__(self, config: Dict[str, Any]):
         """
         Initialize the embedding service.
 
         Args:
-            config: Configuration dictionary containing API settings
+            config: Configuration dictionary containing API settings and model preferences
         """
         self.config = config
-        openai.api_key = config["api_key"]
-        self.client = openai.OpenAI()
-        # self.model = "text-embedding-3-small"  # Current best model for embeddings
-        self.model = "text-embedding-ada-002"  # Current best model for embeddings
-        self.batch_size = 100  # Maximum batch size for embedding requests
+        self.embedding_config = config.get("embeddings", {})
+        self.model_type = self.embedding_config.get("model_type", "openai")
+        self.model_name = self.embedding_config.get("model_name", "text-embedding-3-small")
+        self.batch_size = self.embedding_config.get("batch_size", 100)
+
+        # Initialize the embedding model based on configuration
+        self.model = self._initialize_embedding_model()
+        logger.info(f"Initialized embedding model: {self.model_type} - {self.model_name}")
+
+    def _initialize_embedding_model(self) -> Embeddings:
+        """Initialize the appropriate embedding model based on configuration."""
+        if self.model_type == "openai":
+            return OpenAIEmbeddings(
+                openai_api_key=self.config["api_key"],
+                model=self.model_name,
+                chunk_size=self.batch_size,
+            )
+        elif self.model_type == "huggingface":
+            return HuggingFaceEmbeddings(
+                model_name=self.model_name,
+                model_kwargs=self.embedding_config.get("model_kwargs", {}),
+            )
+        elif self.model_type == "huggingface_instruct":
+            return HuggingFaceInstructEmbeddings(
+                model_name=self.model_name,
+                model_kwargs=self.embedding_config.get("model_kwargs", {}),
+            )
+        elif self.model_type == "cohere":
+            return CohereEmbeddings(
+                cohere_api_key=self.embedding_config.get("api_key"),
+                model=self.model_name,
+            )
+        elif self.model_type == "ollama":
+            ollama_config = self.embedding_config.get("ollama_config", {})
+            return OllamaEmbeddings(
+                model=self.model_name,
+                base_url=ollama_config.get("base_url", "http://localhost:11434"),
+                num_ctx=ollama_config.get("num_ctx", 512),
+                num_thread=ollama_config.get("num_thread", 4),
+                show_progress=True,
+            )
+        else:
+            raise ValueError(f"Unsupported embedding model type: {self.model_type}")
 
     def embed_text(self, text: str) -> List[float]:
         """
@@ -37,8 +82,8 @@ class EmbeddingService:
             List of embedding values
         """
         try:
-            response = self.client.embeddings.create(model=self.model, input=text)
-            return response.data[0].embedding
+            embeddings = self.model.embed_query(text)
+            return embeddings
         except Exception as e:
             logger.error(f"Error generating embedding: {str(e)}")
             raise
@@ -56,24 +101,27 @@ class EmbeddingService:
         Returns:
             List of embedding vectors
         """
-        embeddings = []
+        try:
+            # Process in batches to avoid memory issues
+            all_embeddings = []
 
-        # Process in batches
-        for i in tqdm(
-            range(0, len(chunks), self.batch_size),
-            disable=not show_progress,
-            desc="Generating embeddings",
-        ):
-            batch = chunks[i : i + self.batch_size]
-            try:
-                response = self.client.embeddings.create(model=self.model, input=batch)
-                batch_embeddings = [data.embedding for data in response.data]
-                embeddings.extend(batch_embeddings)
-            except Exception as e:
-                logger.error(f"Error generating embeddings for batch: {str(e)}")
-                raise
+            # For Ollama, we don't need to batch as it handles batching internally
+            if self.model_type == "ollama":
+                return self.model.embed_documents(chunks)
 
-        return embeddings
+            # For other models, use our batching logic
+            for i in tqdm(
+                range(0, len(chunks), self.batch_size),
+                disable=not show_progress,
+                desc="Generating embeddings",
+            ):
+                batch = chunks[i : i + self.batch_size]
+                batch_embeddings = self.model.embed_documents(batch)
+                all_embeddings.extend(batch_embeddings)
+            return all_embeddings
+        except Exception as e:
+            logger.error(f"Error generating embeddings for batch: {str(e)}")
+            raise
 
     def get_embedding_metadata(self) -> Dict[str, Any]:
         """
@@ -82,8 +130,27 @@ class EmbeddingService:
         Returns:
             Dictionary containing embedding metadata
         """
-        return {
-            "model": self.model,
-            "dimensions": 1536,  # Ada-002 embedding size
+        metadata = {
+            "model_type": self.model_type,
+            "model_name": self.model_name,
+            "dimensions": self._get_embedding_dimensions(),
             "normalized": True,
+            "batch_size": self.batch_size,
         }
+
+        # Add Ollama-specific metadata if using Ollama
+        if self.model_type == "ollama":
+            ollama_config = self.embedding_config.get("ollama_config", {})
+            metadata.update({
+                "ollama_base_url": ollama_config.get("base_url", "http://localhost:11434"),
+                "ollama_num_ctx": ollama_config.get("num_ctx", 512),
+                "ollama_num_thread": ollama_config.get("num_thread", 4),
+            })
+
+        return metadata
+
+    def _get_embedding_dimensions(self) -> int:
+        """Get the number of dimensions for the current embedding model."""
+        # Test with a simple string to get dimensions
+        test_embedding = self.embed_text("test")
+        return len(test_embedding)
