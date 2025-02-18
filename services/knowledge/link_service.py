@@ -107,7 +107,11 @@ class LinkService:
 
         for result in similar:
             result_id = result["metadata"].get("doc_id")
-            if result_id and result_id not in existing and result_id != note_id:
+            # Skip self-links and already existing links
+            if (result_id and 
+                result_id not in existing and 
+                result_id != note_id and
+                os.path.normpath(result_id) != os.path.normpath(note_id)):
                 suggestions.append(
                     {
                         "note_id": result_id,
