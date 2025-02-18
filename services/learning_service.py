@@ -74,9 +74,15 @@ class LearningService:
         Returns:
             str: Name of the generated file
         """
+        # Create output directory if it doesn't exist
+        os.makedirs(self.learnings_output_dir, exist_ok=True)
+
+        # Clean the title and create a unique filename using timestamp
         clean_title = re.sub(r"[^\w\s-]", "", title.lower())
         clean_title = re.sub(r"[-\s]+", "_", clean_title).strip("-_")
-        filename = f"{clean_title}.md"
+        # Add timestamp to ensure uniqueness (remove spaces and : from timestamp)
+        clean_timestamp = re.sub(r"[\s:]", "", timestamp)
+        filename = f"{clean_title}_{clean_timestamp}.md"
 
         content = f"# {title}\n\n"
         content += f"Date: {timestamp}\n\n"
@@ -110,8 +116,6 @@ class LearningService:
             print(f"Title: {title}")
             tags = openai_service.generate_learning_tags(learning)
             print(f"Tags: {tags}")
-
-            os.makedirs(self.learnings_output_dir, exist_ok=True)
 
             self.generate_markdown_file(timestamp, learning, title, tags)
 
