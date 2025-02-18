@@ -141,6 +141,14 @@ class LinkService:
         note_id = note_path
         if "cf-notes/" in note_path:
             note_id = note_path.split("cf-notes/")[-1]
+
+        # Read the entire file first
+        try:
+            with open(note_path, "r") as f:
+                content = f.read().rstrip()
+        except IOError as e:
+            logger.error(f"Error reading file {note_path}: {str(e)}")
+            return
         """
         Update Obsidian-style wiki links in a note.
 
@@ -255,40 +263,15 @@ class LinkService:
         return False
 
     def _insert_wiki_link(self, content: str, new_link: str) -> str:
-        """Insert a wiki link in a semantically appropriate location."""
-        # Try to find a "Related" or "Links" section
-        sections = ["## Related", "## Links", "## References"]
-        
-        # First try to find an existing section
-        for section in sections:
-            if section in content:
-                # Split content at the section
-                before_section, section_content = content.split(section, 1)
-                
-                # Find the next section if it exists
-                next_section_start = len(section_content)
-                for next_section in ["##"]:
-                    pos = section_content.find(next_section)
-                    if pos != -1:
-                        next_section_start = pos
-                
-                # Insert the new link after the section header but before any existing content
-                section_content_start = section_content[:next_section_start].strip()
-                section_content_rest = section_content[next_section_start:]
-                
-                # Add the new link, preserving existing content
-                updated_section = f"{section}\n{section_content_start}"
-                if section_content_start:
-                    updated_section += f"\n{new_link}"
-                else:
-                    updated_section += new_link
-                
-                # Reconstruct the full content
-                return f"{before_section}{updated_section}{section_content_rest}"
-        
-        # If no appropriate section found, add to end with header
-        # Ensure we preserve all existing content
-        return f"{content.rstrip()}\n\n## Related\n{new_link}"
+        """Insert a wiki link at the bottom of the document."""
+        # Check if we already have a horizontal line separator
+        if "\n---\n" not in content:
+            # Add horizontal line and links section
+            return f"{content.rstrip()}\n\n---\n{new_link}"
+        else:
+            # Add to existing links section after the horizontal line
+            parts = content.rsplit("\n---\n", 1)
+            return f"{parts[0]}\n---\n{parts[1].rstrip()}\n{new_link}"
 
     def _remove_wiki_link(self, content: str, target: str) -> str:
         """Remove a wiki link from the content."""
