@@ -181,25 +181,33 @@ class LinkService:
 
         if updated:
             try:
-                # Write changes to the file
-                with open(note_path, "w") as f:
-                    logger.info(f"Writing changes to file: {note_path}")
-                    logger.info(f"changes: {content}")
-                    f.write(content)
-                logger.info(f"Updated links in file: {note_path}")
+                # Read existing content to verify changes
+                with open(note_path, "r") as f:
+                    original_content = f.read()
+                    
+                if original_content.strip() != content.strip():
+                    # Write changes to the file
+                    with open(note_path, "w") as f:
+                        logger.info(f"Writing changes to file: {note_path}")
+                        logger.debug(f"Original content length: {len(original_content)}")
+                        logger.debug(f"New content length: {len(content)}")
+                        f.write(content)
+                    logger.info(f"Updated links in file: {note_path}")
 
-                # Update the vector store
-                chunks = self.vector_store.chunking_service.chunk_document(
-                    content, doc_type="note"
-                )
-                chunk_texts = [chunk["content"] for chunk in chunks]
-                embeddings = self.vector_store.embedding_service.embed_chunks(
-                    chunk_texts
-                )
-                self.vector_store.update_document(
-                    doc_id=note_id, new_chunks=chunk_texts, new_embeddings=embeddings
-                )
-                logger.info(f"Updated vector store for: {note_id}")
+                    # Update the vector store
+                    chunks = self.vector_store.chunking_service.chunk_document(
+                        content, doc_type="note"
+                    )
+                    chunk_texts = [chunk["content"] for chunk in chunks]
+                    embeddings = self.vector_store.embedding_service.embed_chunks(
+                        chunk_texts
+                    )
+                    self.vector_store.update_document(
+                        doc_id=note_id, new_chunks=chunk_texts, new_embeddings=embeddings
+                    )
+                    logger.info(f"Updated vector store for: {note_id}")
+                else:
+                    logger.info(f"No content changes needed for: {note_path}")
             except IOError as e:
                 logger.error(f"Error writing to file {note_path}: {str(e)}")
                 raise
