@@ -130,49 +130,47 @@ def process_knowledge_base(cfg, cli_args):
             query_embedding = embedding_service.embed_text(cli_args.query)
             results = vector_store.find_similar(
                 query_embedding=query_embedding,
-                limit=cli_args.limit,
+                limit=cli_args.limit or cfg["search"]["default_limit"],
                 doc_type=cli_args.note_type,
-                threshold=cfg.get("vector_store", {}).get(
-                    "similarity_threshold", 0.3
-                ),  # Lower default threshold
+                threshold=cfg["search"]["thresholds"]["default"]
             )
             if not results:
                 logger.info("No matching results found")
             else:
                 logger.info(f"Found {len(results)} matching results")
-                _display_search_results(results)
+                _display_search_results(results, cfg)
 
         elif cli_args.show_connections:
             note_path = os.path.expanduser(cli_args.show_connections)
             connections = vector_store.find_connected_notes(note_path)
-            if cli_args.graph:
-                _display_connections_graph(note_path, connections)
+            if cli_args.graph and cfg["display"]["graph"]["enabled"]:
+                _display_connections_graph(note_path, connections, cfg)
             else:
-                _display_connections(note_path, connections)
+                _display_connections(note_path, connections, cfg)
 
         elif cli_args.find_by_tag:
             query = f"tag:{cli_args.find_by_tag}"
             query_embedding = embedding_service.embed_text(query)
             results = vector_store.find_similar(
                 query_embedding=query_embedding,
-                limit=cli_args.limit,
-                threshold=0.5,  # Lower threshold for tag search
+                limit=cli_args.limit or cfg["search"]["default_limit"],
+                threshold=cfg["search"]["thresholds"]["tag_search"]
             )
-            _display_search_results(results, focus="tags")
+            _display_search_results(results, cfg, focus="tags")
 
         elif cli_args.find_by_date:
             try:
-                date = datetime.strptime(cli_args.find_by_date, "%Y-%m-%d")
-                query = f"date:{date.strftime('%Y-%m-%d')}"
+                date = datetime.strptime(cli_args.find_by_date, cfg["display"]["date_format"])
+                query = f"date:{date.strftime(cfg['display']['date_format'])}"
                 query_embedding = embedding_service.embed_text(query)
                 results = vector_store.find_similar(
                     query_embedding=query_embedding,
-                    limit=cli_args.limit,
-                    threshold=0.5,  # Lower threshold for date search
+                    limit=cli_args.limit or cfg["search"]["default_limit"],
+                    threshold=cfg["search"]["thresholds"]["date_search"]
                 )
-                _display_search_results(results, focus="dates")
+                _display_search_results(results, cfg, focus="dates")
             except ValueError:
-                logger.error("Invalid date format. Please use YYYY-MM-DD")
+                logger.error(f"Invalid date format. Please use {cfg['display']['date_format']}")
 
         elif cli_args.analyze_all or cli_args.analyze_updated:
             logger.info("Analyzing all notes for potential links...")
@@ -195,7 +193,7 @@ def process_knowledge_base(cfg, cli_args):
             for note in notes:
                 logger.info(f"Analyzing links for: {note['path']}")
                 analysis = link_service.analyze_relationships(note["path"])
-                _display_link_analysis(note["path"], analysis)
+                _display_link_analysis(note["path"], analysis, cfg)
 
                 # Update links based on suggestions
                 if not cli_args.dry_run and analysis["suggested_links"]:
@@ -214,7 +212,7 @@ def process_knowledge_base(cfg, cli_args):
             note_path = os.path.expanduser(cli_args.analyze_links)
             logger.info(f"Analyzing links for: {note_path}")
             analysis = link_service.analyze_relationships(note_path)
-            _display_link_analysis(note_path, analysis)
+            _display_link_analysis(note_path, analysis, cfg)
 
             # Update links based on suggestions
             if not cli_args.dry_run and analysis["suggested_links"]:
@@ -237,7 +235,7 @@ def process_knowledge_base(cfg, cli_args):
                 chunks = chunking_service.chunk_document(
                     content, doc_type=cli_args.note_type or "note"
                 )
-                _display_note_structure(chunks)
+                _display_note_structure(chunks, cfg)
             except FileNotFoundError:
                 logger.error(f"Note not found: {note_path}")
 
@@ -246,7 +244,7 @@ def process_knowledge_base(cfg, cli_args):
         raise
 
 
-def _display_search_results(results, focus=None):
+def _display_search_results(results, cfg, focus=None):
     """Display search results with optional focus on specific metadata."""
     print("\nSearch Results:")
     for i, result in enumerate(results, 1):
@@ -256,10 +254,10 @@ def _display_search_results(results, focus=None):
             print(f"Tags: {', '.join(result['metadata']['tags'])}")
         if focus == "dates" and "dates" in result["metadata"]:
             print(f"Dates: {', '.join(result['metadata']['dates'])}")
-        print(f"Content: {result['content'][:200]}...")
+        print(f"Content: {result['content'][:cfg['search']['preview_length']]}...")
 
 
-def _display_connections(note_path, connections):
+def _display_connections(note_path, connections, cfg):
     """Display note connections in text format."""
     print(f"\nConnections for {note_path}:")
     for conn in connections:
@@ -267,26 +265,27 @@ def _display_connections(note_path, connections):
         print(f"  Relationship: {conn['relationship']}")
         print(f"  Type: {conn['link_type']}")
         if conn.get("context"):
-            print(f"  Context: {conn['context'][:100]}...")
+            print(f"  Context: {conn['context'][:cfg['display']['preview_length']]}...")
 
 
-def _display_connections_graph(note_path, connections):
-    """Display note connections in Mermaid graph format."""
-    print("\n```mermaid")
-    print("graph TD")
-    source_id = os.path.basename(note_path).replace(".md", "")
-    print(f"    {source_id}[{os.path.basename(note_path)}]")
+def _display_connections_graph(note_path, connections, cfg):
+    """Display note connections in configured graph format."""
+    if cfg["display"]["graph"]["format"] == "mermaid":
+        print("\n```mermaid")
+        print("graph TD")
+        source_id = os.path.basename(note_path).replace(".md", "")
+        print(f"    {source_id}[{os.path.basename(note_path)}]")
 
-    for conn in connections:
-        target_id = os.path.basename(conn["target_id"]).replace(".md", "")
-        print(
-            f"    {source_id} -->|{conn['relationship']}| {target_id}[{os.path.basename(conn['target_id'])}]"
-        )
+        for conn in connections:
+            target_id = os.path.basename(conn["target_id"]).replace(".md", "")
+            print(
+                f"    {source_id} -->|{conn['relationship']}| {target_id}[{os.path.basename(conn['target_id'])}]"
+            )
 
-    print("```")
+        print("```")
 
 
-def _display_link_analysis(note_path: str, analysis: Dict[str, Any]) -> None:
+def _display_link_analysis(note_path: str, analysis: Dict[str, Any], cfg: Dict[str, Any]) -> None:
     """Display link analysis results."""
     print(f"\nLink Analysis for {note_path}:")
 
@@ -294,13 +293,13 @@ def _display_link_analysis(note_path: str, analysis: Dict[str, Any]) -> None:
     for link in analysis["direct_links"]:
         print(f"- {link['target_id']} ({link['relationship']})")
         if link.get("context"):
-            print(f"  Context: {link['context'][:100]}...")
+            print(f"  Context: {link['context'][:cfg['display']['preview_length']]}...")
 
     print("\nBacklinks:")
     for link in analysis["backlinks"]:
         print(f"- {link['source_id']} ({link['relationship']})")
         if link.get("context"):
-            print(f"  Context: {link['context'][:100]}...")
+            print(f"  Context: {link['context'][:cfg['display']['preview_length']]}...")
 
     print("\nSemantic Relationships:")
     for link in analysis["semantic_links"]:
@@ -308,7 +307,7 @@ def _display_link_analysis(note_path: str, analysis: Dict[str, Any]) -> None:
             f"- {link['metadata'].get('doc_id', 'Unknown')} "
             f"(similarity: {link['similarity']:.2f})"
         )
-        print(f"  Preview: {link['content'][:100]}...")
+        print(f"  Preview: {link['content'][:cfg['display']['preview_length']]}...")
 
     print("\nSuggested Connections:")
     for suggestion in analysis["suggested_links"]:
@@ -317,10 +316,10 @@ def _display_link_analysis(note_path: str, analysis: Dict[str, Any]) -> None:
             f"(similarity: {suggestion['similarity']:.2f})"
         )
         print(f"  Reason: {suggestion['reason']}")
-        print(f"  Preview: {suggestion['preview']}")
+        print(f"  Preview: {suggestion['preview'][:cfg['display']['preview_length']]}...")
 
 
-def _display_note_structure(chunks):
+def _display_note_structure(chunks, cfg):
     """Display semantic structure of a note."""
     print("\nNote Structure:")
     for i, chunk in enumerate(chunks, 1):
@@ -331,7 +330,7 @@ def _display_note_structure(chunks):
         if chunk["metadata"].get("dates"):
             print(f"   Dates: {', '.join(chunk['metadata']['dates'])}")
         print(f"   Size: {chunk['metadata']['char_count']} characters")
-        print(f"   Preview: {chunk['content'][:100]}...")
+        print(f"   Preview: {chunk['content'][:cfg['display']['preview_length']]}...")
 
 
 if __name__ == "__main__":
@@ -339,6 +338,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     cfg = load_config(args.config)
+
+    # Configure logging based on config
+    logging.basicConfig(
+        level=getattr(logging, cfg["logging"]["level"]),
+        format=cfg["logging"]["format"]
+    )
+    logger = logging.getLogger(__name__)
 
     if args.command == "notes":
         if args.process_learnings:

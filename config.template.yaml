@@ -11,24 +11,46 @@ learnings_file: "~/Documents/notes/jrnl/learnings.md"
 learnings_output_dir: "~/Documents/notes/learnings"
 
 # Notes directory for knowledge base
-notes_base_dir: "~/Documents/notes"  # Base directory for all notes
+notes_base_dir: "~/Documents/notes" # Base directory for all notes
 knowledge_base:
-  exclude_patterns: 
-    - "*.excalidraw.md"  # Exclude Excalidraw files
-    - "templates/*"       # Exclude template directory
-    - ".obsidian/*"      # Exclude Obsidian config
-    - ".trash/*"         # Exclude trash
-    - ".git/*"           # Exclude git directory
+  exclude_patterns:
+    - "*.excalidraw.md" # Exclude Excalidraw files
+    - "templates/*" # Exclude template directory
+    - ".obsidian/*" # Exclude Obsidian config
+    - ".trash/*" # Exclude trash
+    - ".git/*" # Exclude git directory
 
 # Vector store settings
 vector_store:
-  path: "~/Documents/notes/.vector_store"  # Local ChromaDB storage
-  chunk_size_min: 50   # Minimum characters per chunk
-  chunk_size_max: 500  # Maximum characters per chunk
-  similarity_threshold: 0.85  # Minimum similarity score for matches
+  path: "~/Documents/notes/.vector_store" # Local ChromaDB storage
+  chunk_size_min: 50 # Minimum characters per chunk
+  chunk_size_max: 500 # Maximum characters per chunk
+  similarity_threshold: 0.85 # Minimum similarity score for matches
 
 # Chunking configuration
 chunking_config:
   recursive:
-    chunk_size: 500    # Maximum characters per chunk
-    chunk_overlap: 50  # Number of characters to overlap between chunks
+    chunk_size: 500 # Maximum characters per chunk
+    chunk_overlap: 50 # Number of characters to overlap between chunks
+
+# Search settings
+search:
+  default_limit: 10 # Default number of results to return
+  preview_length: 200 # Number of characters to show in previews
+  thresholds:
+    default: 0.85 # Default similarity threshold
+    tag_search: 0.5 # Threshold for tag-based searches
+    date_search: 0.5 # Threshold for date-based searches
+
+# Display settings
+display:
+  date_format: "%Y-%m-%d" # Format for displaying dates
+  preview_length: 100 # Length of preview text in characters
+  graph:
+    enabled: true # Whether to enable graph visualization
+    format: "mermaid" # Graph format (mermaid only for now)
+
+# Logging settings
+logging:
+  level: "INFO" # Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
