@@ -252,12 +252,25 @@ class LinkService:
         sections = ["## Related", "## Links", "## References"]
         for section in sections:
             if section in content:
-                # Insert after section header
-                parts = content.split(section, 1)
-                return f"{parts[0]}{section}\n{new_link}\n{parts[1]}"
-
+                # Find the section and insert link after its header
+                section_start = content.find(section)
+                next_section_start = float('inf')
+                
+                # Find the start of the next section if it exists
+                for next_section in ["##"]:
+                    pos = content.find(next_section, section_start + len(section))
+                    if pos != -1:
+                        next_section_start = min(next_section_start, pos)
+                
+                if next_section_start == float('inf'):
+                    # No next section found, append to the end of the section
+                    return f"{content[:section_start + len(section)]}\n{new_link}\n{content[section_start + len(section):]}"
+                else:
+                    # Insert before the next section
+                    return f"{content[:section_start + len(section)]}\n{new_link}\n{content[section_start + len(section):]}"
+        
         # If no appropriate section found, add to end with header
-        return f"{content.rstrip()}\n\n## Related\n{new_link}\n"
+        return f"{content}\n\n## Related\n{new_link}"
 
     def _remove_wiki_link(self, content: str, target: str) -> str:
         """Remove a wiki link from the content."""
