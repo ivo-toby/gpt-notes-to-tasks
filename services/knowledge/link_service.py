@@ -30,11 +30,11 @@ class LinkService:
         Returns:
             Dictionary containing relationship analysis
         """
-        # Strip the base path if it exists
-        base_path = "~/workspace/rd/cf-notes/"
-        expanded_base = os.path.expanduser(base_path)
-        if note_id.startswith(expanded_base):
-            note_id = note_id[len(expanded_base) :]
+        # Normalize the path
+        note_id = os.path.normpath(note_id)
+        # Convert absolute path to relative if it's under the notes directory
+        if 'cf-notes/' in note_id:
+            note_id = note_id.split('cf-notes/')[-1]
         logger.info(f"Starting relationship analysis for note: {note_id}")
 
         # Get existing connections
@@ -111,8 +111,12 @@ class LinkService:
 
         return suggestions
 
-    def update_obsidian_links(self, note_id: str, links: List[Dict[str, Any]], 
+    def update_obsidian_links(self, note_path: str, links: List[Dict[str, Any]], 
                              update_backlinks: bool = True) -> None:
+        # Convert path to relative format
+        note_id = note_path
+        if 'cf-notes/' in note_path:
+            note_id = note_path.split('cf-notes/')[-1]
         """
         Update Obsidian-style wiki links in a note.
 
