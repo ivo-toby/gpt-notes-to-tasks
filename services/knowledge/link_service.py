@@ -159,7 +159,16 @@ class LinkService:
         # Read the entire file first
         try:
             with open(note_path, "r") as f:
-                content = f.read().rstrip()
+                original_content = f.read()
+                
+            # Split content at horizontal line if it exists
+            if "\n---\n" in original_content:
+                content_parts = original_content.split("\n---\n", 1)
+                main_content = content_parts[0]
+                links_section = content_parts[1] if len(content_parts) > 1 else ""
+            else:
+                main_content = original_content
+                links_section = ""
         except IOError as e:
             logger.error(f"Error reading file {note_path}: {str(e)}")
             return
@@ -201,35 +210,57 @@ class LinkService:
                 content = self._remove_wiki_link(content, link["target_id"])
                 updated = True
 
-        if updated:
-            try:
-                # Read existing content to verify changes
-                with open(note_path, "r") as f:
-                    original_content = f.read()
+        # Process each link
+        new_links = []
+        for link in links:
+            if link.get("add_wiki_link"):
+                target = link["target_id"]
+                alias = link.get("alias", self._generate_alias(target))
+                new_link = f"[[{target}|{alias}]]"
+                
+                # Check if link already exists in either section
+                if not self._has_wiki_link(main_content + links_section, target):
+                    new_links.append(new_link)
                     
-                if original_content.strip() != content.strip():
-                    # Write changes to the file
-                    with open(note_path, "w") as f:
-                        logger.info(f"Writing changes to file: {note_path}")
-                        logger.debug(f"Original content length: {len(original_content)}")
-                        logger.debug(f"New content length: {len(content)}")
-                        f.write(content)
-                    logger.info(f"Updated links in file: {note_path}")
+                    # Update backlinks in target note if requested
+                    if update_backlinks:
+                        self._update_target_backlinks(target, note_id, note_path)
 
-                    # Update the vector store
-                    chunks = self.vector_store.chunking_service.chunk_document(
-                        content, doc_type="note"
-                    )
-                    chunk_texts = [chunk["content"] for chunk in chunks]
-                    embeddings = self.vector_store.embedding_service.embed_chunks(
-                        chunk_texts
-                    )
-                    self.vector_store.update_document(
-                        doc_id=note_id, new_chunks=chunk_texts, new_embeddings=embeddings
-                    )
-                    logger.info(f"Updated vector store for: {note_id}")
-                else:
-                    logger.info(f"No content changes needed for: {note_path}")
+        if new_links:
+            try:
+                # Construct new content preserving main content
+                updated_content = main_content.rstrip()
+                if not links_section and new_links:
+                    # Add horizontal line if it doesn't exist
+                    updated_content += "\n\n---\n"
+                
+                # Add new links
+                for link in new_links:
+                    updated_content += f"\n{link}"
+                
+                # Write changes to the file
+                with open(note_path, "w") as f:
+                    logger.info(f"Writing changes to file: {note_path}")
+                    f.write(updated_content)
+                logger.info(f"Updated links in file: {note_path}")
+
+                # Update the vector store
+                chunks = self.vector_store.chunking_service.chunk_document(
+                    updated_content, doc_type="note"
+                )
+                chunk_texts = [chunk["content"] for chunk in chunks]
+                embeddings = self.vector_store.embedding_service.embed_chunks(
+                    chunk_texts
+                )
+                self.vector_store.update_document(
+                    doc_id=note_id, new_chunks=chunk_texts, new_embeddings=embeddings
+                )
+                logger.info(f"Updated vector store for: {note_id}")
+            except IOError as e:
+                logger.error(f"Error writing to file {note_path}: {str(e)}")
+                raise
+        else:
+            logger.info(f"No new links to add for: {note_path}")
             except IOError as e:
                 logger.error(f"Error writing to file {note_path}: {str(e)}")
                 raise
