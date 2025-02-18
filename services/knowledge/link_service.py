@@ -35,8 +35,8 @@ class LinkService:
         # Normalize the path
         note_id = os.path.normpath(note_id)
         # Convert absolute path to relative if it's under the notes directory
-        if 'cf-notes/' in note_id:
-            note_id = note_id.split('cf-notes/')[-1]
+        if "cf-notes/" in note_id:
+            note_id = note_id.split("cf-notes/")[-1]
         logger.info(f"Starting relationship analysis for note: {note_id}")
 
         # Get existing connections
@@ -113,8 +113,9 @@ class LinkService:
 
         return suggestions
 
-    def update_obsidian_links(self, note_path: str, links: List[Dict[str, Any]], 
-                             update_backlinks: bool = True) -> None:
+    def update_obsidian_links(
+        self, note_path: str, links: List[Dict[str, Any]], update_backlinks: bool = True
+    ) -> None:
         """
         Update Obsidian-style wiki links in a note file.
 
@@ -125,11 +126,11 @@ class LinkService:
         """
         # Ensure we have the full path
         note_path = os.path.expanduser(note_path)
-        
+
         # Get relative ID for vector store
         note_id = note_path
-        if 'cf-notes/' in note_path:
-            note_id = note_path.split('cf-notes/')[-1]
+        if "cf-notes/" in note_path:
+            note_id = note_path.split("cf-notes/")[-1]
         """
         Update Obsidian-style wiki links in a note.
 
@@ -152,13 +153,13 @@ class LinkService:
                 target = link["target_id"]
                 alias = link.get("alias", self._generate_alias(target))
                 new_link = f"[[{target}|{alias}]]"
-                
+
                 # Check if link already exists
                 if not self._has_wiki_link(content, target):
                     # Add link in a semantically appropriate location
                     content = self._insert_wiki_link(content, new_link)
                     updated = True
-                    
+
                     # Update backlinks in target note if requested
                     if update_backlinks:
                         self._update_target_backlinks(target, note_id, note_path)
@@ -171,21 +172,22 @@ class LinkService:
         if updated:
             try:
                 # Write changes to the file
-                with open(note_path, 'w') as f:
+                with open(note_path, "w") as f:
+                    logger.info(f"Writing changes to file: {note_path}")
+                    logger.info(f"changes: {content}")
                     f.write(content)
                 logger.info(f"Updated links in file: {note_path}")
 
                 # Update the vector store
                 chunks = self.vector_store.chunking_service.chunk_document(
-                    content,
-                    doc_type="note"
+                    content, doc_type="note"
                 )
-                chunk_texts = [chunk['content'] for chunk in chunks]
-                embeddings = self.vector_store.embedding_service.embed_chunks(chunk_texts)
+                chunk_texts = [chunk["content"] for chunk in chunks]
+                embeddings = self.vector_store.embedding_service.embed_chunks(
+                    chunk_texts
+                )
                 self.vector_store.update_document(
-                    doc_id=note_id,
-                    new_chunks=chunk_texts,
-                    new_embeddings=embeddings
+                    doc_id=note_id, new_chunks=chunk_texts, new_embeddings=embeddings
                 )
                 logger.info(f"Updated vector store for: {note_id}")
             except IOError as e:
@@ -195,9 +197,9 @@ class LinkService:
     def _generate_alias(self, target: str) -> str:
         """Generate a readable alias from the target ID."""
         # Remove file extension and path
-        alias = os.path.basename(target).replace('.md', '')
+        alias = os.path.basename(target).replace(".md", "")
         # Convert kebab/snake case to title case
-        alias = ' '.join(word.capitalize() for word in re.split(r'[-_]', alias))
+        alias = " ".join(word.capitalize() for word in re.split(r"[-_]", alias))
         return alias
 
     def _has_wiki_link(self, content: str, target: str) -> bool:
@@ -214,16 +216,18 @@ class LinkService:
                 # Insert after section header
                 parts = content.split(section, 1)
                 return f"{parts[0]}{section}\n{new_link}\n{parts[1]}"
-        
+
         # If no appropriate section found, add to end with header
         return f"{content.rstrip()}\n\n## Related\n{new_link}\n"
 
     def _remove_wiki_link(self, content: str, target: str) -> str:
         """Remove a wiki link from the content."""
         pattern = rf"\[\[{re.escape(target)}(?:\|[^\]]+)?\]\]\n?"
-        return re.sub(pattern, '', content)
+        return re.sub(pattern, "", content)
 
-    def _update_target_backlinks(self, target_id: str, source_id: str, source_path: str) -> None:
+    def _update_target_backlinks(
+        self, target_id: str, source_id: str, source_path: str
+    ) -> None:
         """Update backlinks section in the target note."""
         target_content = self.vector_store.get_note_content(target_id)
         if not target_content:
@@ -231,35 +235,34 @@ class LinkService:
 
         content = target_content["content"]
         backlink = f"[[{source_id}]]"
-        
+
         # Find or create backlinks section
         if "## Backlinks" not in content:
             content += f"\n\n## Backlinks\n{backlink}\n"
         else:
             # Add to existing backlinks section if not already present
             if backlink not in content:
-                content = content.replace("## Backlinks\n", f"## Backlinks\n{backlink}\n")
+                content = content.replace(
+                    "## Backlinks\n", f"## Backlinks\n{backlink}\n"
+                )
 
         try:
             # Get full path for target note
             target_path = os.path.join(os.path.dirname(source_path), target_id)
-            
+
             # Write changes to the target file
-            with open(target_path, 'w') as f:
+            with open(target_path, "w") as f:
                 f.write(content)
             logger.info(f"Updated backlinks in file: {target_path}")
 
             # Update target note in vector store
             chunks = self.vector_store.chunking_service.chunk_document(
-                content,
-                doc_type="note"
+                content, doc_type="note"
             )
-            chunk_texts = [chunk['content'] for chunk in chunks]
+            chunk_texts = [chunk["content"] for chunk in chunks]
             embeddings = self.vector_store.embedding_service.embed_chunks(chunk_texts)
             self.vector_store.update_document(
-                doc_id=target_id,
-                new_chunks=chunk_texts,
-                new_embeddings=embeddings
+                doc_id=target_id, new_chunks=chunk_texts, new_embeddings=embeddings
             )
             logger.info(f"Updated vector store for target: {target_id}")
         except IOError as e:
