@@ -91,20 +91,30 @@ class LinkService:
         # Get note content
         note_content = self.vector_store.get_note_content(note_id)
         if not note_content:
+            logger.warning(f"Could not get content for note: {note_id}")
             return []
 
-        # Find similar content
+        # Find similar content with lower threshold for suggestions
         similar = self.vector_store.find_similar(
-            query_embedding=note_content["embedding"], limit=10, threshold=0.6
+            query_embedding=note_content["embedding"],
+            limit=20,  # Increased limit to find more potential matches
+            threshold=0.4  # Lower threshold for suggestions
         )
+        
+        logger.info(f"Found {len(similar)} similar documents for {note_id}")
 
-        # Filter out existing connections
-        existing = set(
-            link["target_id"]
-            for link in self.vector_store.find_connected_notes(note_id)
-        )
+        # Get existing connections including backlinks
+        existing = set()
+        direct_links = self.vector_store.find_connected_notes(note_id)
+        backlinks = self.vector_store.find_backlinks(note_id)
+        
+        # Add both direct links and backlinks to existing set
+        existing.update(link["target_id"] for link in direct_links)
+        existing.update(link["source_id"] for link in backlinks)
+        
+        logger.info(f"Found {len(existing)} existing connections")
+
         suggestions = []
-
         for result in similar:
             result_id = result["metadata"].get("doc_id")
             # Skip self-links and already existing links
@@ -112,15 +122,19 @@ class LinkService:
                 result_id not in existing and 
                 result_id != note_id and
                 os.path.normpath(result_id) != os.path.normpath(note_id)):
-                suggestions.append(
-                    {
-                        "note_id": result_id,
-                        "similarity": result["similarity"],
-                        "reason": "Content similarity",
-                        "preview": result["content"][:200],
-                    }
-                )
+                
+                # Get a meaningful preview
+                preview = result["content"][:200].replace("\n", " ").strip()
+                
+                suggestions.append({
+                    "note_id": result_id,
+                    "similarity": result["similarity"],
+                    "reason": f"Content similarity ({result['similarity']:.2f})",
+                    "preview": preview
+                })
+                logger.debug(f"Added suggestion: {result_id} with similarity {result['similarity']:.2f}")
 
+        logger.info(f"Generated {len(suggestions)} suggestions for {note_id}")
         return suggestions
 
     def update_obsidian_links(
