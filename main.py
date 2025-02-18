@@ -159,6 +159,27 @@ def process_knowledge_base(cfg, cli_args):
             except ValueError:
                 logger.error("Invalid date format. Please use YYYY-MM-DD")
 
+        elif cli_args.analyze_all:
+            logger.info("Analyzing all notes for potential links...")
+            notes = summary_service.get_all_notes()
+            for note in notes:
+                logger.info(f"Analyzing links for: {note['path']}")
+                analysis = link_service.analyze_relationships(note['path'])
+                _display_link_analysis(note['path'], analysis)
+
+                # Update links based on suggestions
+                if not cli_args.dry_run and analysis['suggested_links']:
+                    links_to_add = [
+                        {
+                            'add_wiki_link': True,
+                            'target_id': suggestion['note_id'],
+                            'alias': None  # Let the service generate an alias
+                        }
+                        for suggestion in analysis['suggested_links']
+                    ]
+                    link_service.update_obsidian_links(note['path'], links_to_add)
+                    logger.info(f"Links updated successfully for: {note['path']}")
+
         elif cli_args.analyze_links:
             note_path = os.path.expanduser(cli_args.analyze_links)
             logger.info(f"Analyzing links for: {note_path}")
