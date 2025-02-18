@@ -1,13 +1,18 @@
 """Service for managing the vector store using ChromaDB."""
 
 import os
+import time
 import chromadb
 from chromadb.config import Settings
 from typing import List, Dict, Any, Optional
 import logging
 import json
+from sqlite3 import OperationalError
 
 logger = logging.getLogger(__name__)
+
+MAX_RETRIES = 3
+RETRY_DELAY = 1  # seconds
 
 class VectorStoreService:
     """Manages document storage and retrieval using ChromaDB."""
@@ -85,6 +90,25 @@ class VectorStoreService:
             logger.error(f"Error checking document update status: {str(e)}")
             return True  # If in doubt, update the document
 
+    def _retry_operation(self, operation, *args, **kwargs):
+        """Execute an operation with retries."""
+        last_error = None
+        for attempt in range(MAX_RETRIES):
+            try:
+                return operation(*args, **kwargs)
+            except OperationalError as e:
+                last_error = e
+                logger.warning(f"Database operation failed (attempt {attempt + 1}/{MAX_RETRIES}): {str(e)}")
+                if attempt < MAX_RETRIES - 1:
+                    time.sleep(RETRY_DELAY * (attempt + 1))
+                continue
+            except Exception as e:
+                logger.error(f"Unexpected error during database operation: {str(e)}")
+                raise
+        
+        logger.error(f"Operation failed after {MAX_RETRIES} attempts")
+        raise last_error
+
     def add_document(self, doc_id: str, chunks: List[str], embeddings: List[List[float]], 
                     metadata: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -131,7 +155,8 @@ class VectorStoreService:
         # Only add if we have chunks
         if chunk_ids:
             # Upsert chunks to main notes collection
-            self.collections['notes'].upsert(
+            self._retry_operation(
+                self.collections['notes'].upsert,
                 ids=chunk_ids,
                 embeddings=embeddings,
                 documents=chunks,
@@ -146,7 +171,8 @@ class VectorStoreService:
         
         # Store document metadata for update tracking
         if metadata and 'modified_time' in metadata:
-            self.metadata_collection.upsert(
+            self._retry_operation(
+                self.metadata_collection.upsert,
                 ids=[doc_id],
                 metadatas=[{'modified_time': metadata['modified_time']}],
                 embeddings=[[1.0] * 1536],  # Dummy embedding for metadata tracking (OpenAI dimension)
