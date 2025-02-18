@@ -135,21 +135,21 @@ class OpenAIService:
                                     or None if processing fails
         """
         prompt = f"""
-        Given the provided journal entries, please generate an easy-to-read daily journal in Markdown format, which captures all the knowledge, links, and facts from the journal entries for future reference. 
-        Following the summary, enumerate any actionable items identified within the journal entries that are actionable by the owner of the notes. 
+        Given the provided journal entries, please generate an easy-to-read daily journal in Markdown format, which captures all the knowledge, links, and facts from the journal entries for future reference.
+        Following the summary, enumerate any actionable items identified within the journal entries that are actionable by the owner of the notes.
         Conclude with a list of relevant tags, formatted in snake-case, that categorize the content or themes of the notes.
-        
+
         Example:
         Journal entry: "[2024-05-21 02:38:09 PM] The team discussed the upcoming project launch, [focusing on the marketing strategy](http://www.link.com), budget allocations, and the final review of the product design. Tasks were assigned to finalize the promotional materials and secure additional funding."
-        
+
         Summary: "[02:38:09 PM] Discussed upcoming product launch, [marketing strategies](http://www.link.com), budgeting, and product design finalization."
-        
+
         Actionable Items:
         1. Finalize promotional materials.
         2. Secure additional funding.
-        
+
         Tags: project_launch, marketing_strategy, budget_allocation, product_design
-        
+
         Journal entries:\\n{notes}"""
 
         messages = [
@@ -201,29 +201,29 @@ class OpenAIService:
             Optional[str]: Generated summary or None if processing fails
         """
         prompt = f"""
-        Given the provided journal entries, please generate an easy-to-read weekly journal in Markdown format, which captures all the knowledge, links, and facts from the journal entries for future reference. 
-        Following the summary, create a section that enumerates accomplishments based on the journal entries. 
+        Given the provided journal entries, please generate an easy-to-read weekly journal in Markdown format, which captures all the knowledge, links, and facts from the journal entries for future reference.
+        Following the summary, create a section that enumerates accomplishments based on the journal entries.
         Following the accomplishments, create a section called Learnings, and list any learnings identified within the journal entries.
-        
+
         Conclude with a list of links extracted from the journal entries, formatted in Markdown and infer a title for each link based on the URL or context in which the link was originally found.
-        
+
         Example:
         Journal entry: "[2024-05-21 02:38:09 PM] The team discussed the upcoming project launch, [focusing on the marketing strategy](http://www.link.com), budget allocations, and the final review of the product design. Tasks were assigned to finalize the promotional materials and secure additional funding."
-        
-        Summary: 
+
+        Summary:
         - [2024-05-21 02:38:09 PM] Discussed upcoming product launch, focusing on the marketing strategy, budget allocations, and product design finalization.
-        
+
         Accomplishments:
         - Finalized promotional materials.
         - Secured additional funding.
-        
+
         Learnings:
         - Importance of clear communication in marketing strategies.
         - Budget allocation challenges.
-        
+
         Links:
         - [Marketing Strategy](http://www.link.com)
-        
+
         Weekly journal entries:
         {notes}
         """
@@ -365,6 +365,11 @@ Journal entries:\n{notes}"""
         )
 
         # Extract the arguments from the response function call
-        meeting_notes_list = eval(response.function_call.arguments)
-
-        return meeting_notes_list
+        if response and response.function_call and response.function_call.arguments:
+            try:
+                import json
+                return json.loads(response.function_call.arguments)
+            except Exception as e:
+                print(f"Error parsing meeting notes: {e}")
+                return None
+        return None
