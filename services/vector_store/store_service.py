@@ -262,7 +262,7 @@ class VectorStoreService:
             List of documents linking to this document
         """
         results = self.collections['links'].query(
-            query_embeddings=[[1.0] * 384],  # Dummy embedding for exact match
+            query_embeddings=[[1.0] * 1536],  # Dummy embedding for exact match (OpenAI dimension)
             where={"target_id": doc_id},
             include=["metadatas"]
         )
