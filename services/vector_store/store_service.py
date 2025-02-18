@@ -37,6 +37,12 @@ class VectorStoreService:
             settings=Settings(anonymized_telemetry=False, allow_reset=True),
         )
 
+        # Initialize system metadata collection
+        self.system_collection = self.client.get_or_create_collection(
+            name="system",
+            metadata={"description": "System-level metadata and tracking"}
+        )
+
         # Create metadata collection for tracking document updates
         self.metadata_collection = self.client.get_or_create_collection(
             name="metadata",
@@ -63,6 +69,33 @@ class VectorStoreService:
         except Exception as e:
             logger.error(f"Error initializing vector store collections: {str(e)}")
             raise
+
+    def get_last_update_time(self) -> float:
+        """Get the timestamp of the last update operation."""
+        try:
+            results = self.system_collection.get(
+                ids=["last_update"],
+                include=["metadatas"]
+            )
+            if results["ids"]:
+                return float(results["metadatas"][0].get("timestamp", 0))
+            return 0
+        except Exception as e:
+            logger.error(f"Error getting last update time: {str(e)}")
+            return 0
+
+    def set_last_update_time(self, timestamp: float) -> None:
+        """Set the timestamp of the last update operation."""
+        try:
+            self._retry_operation(
+                self.system_collection.upsert,
+                ids=["last_update"],
+                metadatas=[{"timestamp": str(timestamp)}],
+                embeddings=[[1.0] * 1536],
+                documents=[""]
+            )
+        except Exception as e:
+            logger.error(f"Error setting last update time: {str(e)}")
 
     def needs_update(self, doc_id: str, modified_time: float) -> bool:
         """

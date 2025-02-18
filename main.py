@@ -67,10 +67,22 @@ def process_knowledge_base(cfg, cli_args):
         summary_service = SummaryService(cfg)
         link_service = LinkService(vector_store)
 
-        if cli_args.reindex:
-            logger.info("Reindexing all notes...")
-            if not cli_args.dry_run:
+        if cli_args.reindex or cli_args.update:
+            if cli_args.reindex:
+                logger.info("Reindexing all notes...")
                 notes = summary_service.get_all_notes()
+            else:
+                last_update = vector_store.get_last_update_time()
+                logger.info(f"Checking for notes modified since {datetime.fromtimestamp(last_update)}")
+                notes = [note for note in summary_service.get_all_notes() 
+                        if note.get('modified_time', 0) > last_update]
+                if not notes:
+                    logger.info("No notes need updating")
+                    return
+                logger.info(f"Found {len(notes)} notes to update")
+
+            if not cli_args.dry_run:
+                current_time = time.time()
                 for note in notes:
                     logger.info(f"Processing note: {note['id']}")
                     chunks = chunking_service.chunk_document(
@@ -91,6 +103,10 @@ def process_knowledge_base(cfg, cli_args):
                         embeddings=embeddings,
                         metadata=note
                     )
+                
+                if cli_args.update:
+                    vector_store.set_last_update_time(current_time)
+                    logger.info(f"Updated last_update timestamp to {datetime.fromtimestamp(current_time)}")
             else:
                 logger.info("Dry run - no changes made")
 
