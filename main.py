@@ -159,9 +159,19 @@ def process_knowledge_base(cfg, cli_args):
             except ValueError:
                 logger.error("Invalid date format. Please use YYYY-MM-DD")
 
-        elif cli_args.analyze_all:
+        elif cli_args.analyze_all or cli_args.analyze_updated:
             logger.info("Analyzing all notes for potential links...")
-            notes = summary_service.get_all_notes()
+            if cli_args.analyze_updated:
+                last_update = vector_store.get_last_update_time()
+                logger.info(f"Checking for notes modified since {datetime.fromtimestamp(last_update)}")
+                notes = [note for note in summary_service.get_all_notes() 
+                        if note.get('modified_time', 0) > last_update]
+                if not notes:
+                    logger.info("No notes need updating")
+                    return
+                logger.info(f"Found {len(notes)} notes to analyze")
+            else:
+                notes = summary_service.get_all_notes()
             for note in notes:
                 logger.info(f"Analyzing links for: {note['path']}")
                 analysis = link_service.analyze_relationships(note['path'])

@@ -125,6 +125,11 @@ def setup_argparser() -> argparse.ArgumentParser:
         help="Analyze and auto-link all notes in the knowledge base"
     )
     kb_parser.add_argument(
+        "--analyze-updated",
+        action="store_true",
+        help="Analyze and auto-link only recently modified notes"
+    )
+    kb_parser.add_argument(
         "--note-type",
         type=str,
         choices=['daily', 'weekly', 'meeting', 'learning', 'note'],
