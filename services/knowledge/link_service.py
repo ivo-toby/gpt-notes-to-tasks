@@ -97,42 +97,48 @@ class LinkService:
         # Find similar content with lower threshold for suggestions
         similar = self.vector_store.find_similar(
             query_embedding=note_content["embedding"],
-            limit=20,  # Increased limit to find more potential matches
-            threshold=0.4  # Lower threshold for suggestions
+            limit=10,  # Increased limit to find more potential matches
+            threshold=0.5,  # Lower threshold for suggestions
         )
-        
+
         logger.info(f"Found {len(similar)} similar documents for {note_id}")
 
         # Get existing connections including backlinks
         existing = set()
         direct_links = self.vector_store.find_connected_notes(note_id)
         backlinks = self.vector_store.find_backlinks(note_id)
-        
+
         # Add both direct links and backlinks to existing set
         existing.update(link["target_id"] for link in direct_links)
         existing.update(link["source_id"] for link in backlinks)
-        
+
         logger.info(f"Found {len(existing)} existing connections")
 
         suggestions = []
         for result in similar:
             result_id = result["metadata"].get("doc_id")
             # Skip self-links and already existing links
-            if (result_id and 
-                result_id not in existing and 
-                result_id != note_id and
-                os.path.normpath(result_id) != os.path.normpath(note_id)):
-                
+            if (
+                result_id
+                and result_id not in existing
+                and result_id != note_id
+                and os.path.normpath(result_id) != os.path.normpath(note_id)
+            ):
+
                 # Get a meaningful preview
                 preview = result["content"][:200].replace("\n", " ").strip()
-                
-                suggestions.append({
-                    "note_id": result_id,
-                    "similarity": result["similarity"],
-                    "reason": f"Content similarity ({result['similarity']:.2f})",
-                    "preview": preview
-                })
-                logger.debug(f"Added suggestion: {result_id} with similarity {result['similarity']:.2f}")
+
+                suggestions.append(
+                    {
+                        "note_id": result_id,
+                        "similarity": result["similarity"],
+                        "reason": f"Content similarity ({result['similarity']:.2f})",
+                        "preview": preview,
+                    }
+                )
+                logger.debug(
+                    f"Added suggestion: {result_id} with similarity {result['similarity']:.2f}"
+                )
 
         logger.info(f"Generated {len(suggestions)} suggestions for {note_id}")
         return suggestions
@@ -160,7 +166,7 @@ class LinkService:
         try:
             with open(note_path, "r") as f:
                 original_content = f.read()
-                
+
             # Split content at horizontal line if it exists
             if "\n---\n" in original_content:
                 content_parts = original_content.split("\n---\n", 1)
@@ -217,11 +223,11 @@ class LinkService:
                 target = link["target_id"]
                 alias = link.get("alias", self._generate_alias(target))
                 new_link = f"[[{target}|{alias}]]"
-                
+
                 # Check if link already exists in either section
                 if not self._has_wiki_link(main_content + links_section, target):
                     new_links.append(new_link)
-                    
+
                     # Update backlinks in target note if requested
                     if update_backlinks:
                         self._update_target_backlinks(target, note_id, note_path)
@@ -233,11 +239,11 @@ class LinkService:
                 if not links_section and new_links:
                     # Add horizontal line if it doesn't exist
                     updated_content += "\n\n---\n"
-                
+
                 # Add new links
                 for link in new_links:
                     updated_content += f"\n{link}"
-                
+
                 # Write changes to the file
                 with open(note_path, "w") as f:
                     logger.info(f"Writing changes to file: {note_path}")
