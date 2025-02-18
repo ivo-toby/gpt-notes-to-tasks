@@ -161,7 +161,7 @@ class LinkService:
                     
                     # Update backlinks in target note if requested
                     if update_backlinks:
-                        self._update_target_backlinks(target, note_id)
+                        self._update_target_backlinks(target, note_id, note_path)
 
             elif link.get("remove_wiki_link"):
                 # Remove existing link
@@ -223,7 +223,7 @@ class LinkService:
         pattern = rf"\[\[{re.escape(target)}(?:\|[^\]]+)?\]\]\n?"
         return re.sub(pattern, '', content)
 
-    def _update_target_backlinks(self, target_id: str, source_id: str) -> None:
+    def _update_target_backlinks(self, target_id: str, source_id: str, source_path: str) -> None:
         """Update backlinks section in the target note."""
         target_content = self.vector_store.get_note_content(target_id)
         if not target_content:
@@ -242,7 +242,7 @@ class LinkService:
 
         try:
             # Get full path for target note
-            target_path = os.path.join(os.path.dirname(note_path), target_id)
+            target_path = os.path.join(os.path.dirname(source_path), target_id)
             
             # Write changes to the target file
             with open(target_path, 'w') as f:
