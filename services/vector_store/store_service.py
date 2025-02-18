@@ -130,14 +130,14 @@ class VectorStoreService:
 
         # Only add if we have chunks
         if chunk_ids:
-            # Add chunks to main notes collection
-            self.collections['notes'].add(
+            # Upsert chunks to main notes collection
+            self.collections['notes'].upsert(
                 ids=chunk_ids,
                 embeddings=embeddings,
                 documents=chunks,
                 metadatas=chunk_metadata
             )
-            logger.info(f"Added {len(chunk_ids)} chunks to vector store")
+            logger.info(f"Upserted {len(chunk_ids)} chunks to vector store")
         else:
             logger.warning(f"No valid chunks to add for document {doc_id}")
         
@@ -418,7 +418,7 @@ class VectorStoreService:
             wiki_links = self._extract_wiki_links(chunk)
             for link in wiki_links:
                 link_id = f"{doc_id}_to_{link['target']}"
-                self.collections['links'].add(
+                self.collections['links'].upsert(
                     ids=[link_id],
                     embeddings=[[1.0] * 1536],  # Dummy embedding for exact match (OpenAI dimension)
                     documents=[""],  # No need to store text
@@ -435,9 +435,9 @@ class VectorStoreService:
             external_refs = self._extract_external_refs(chunk)
             for ref in external_refs:
                 ref_id = f"{doc_id}_to_{hash(ref['url'])}"
-                self.collections['references'].add(
+                self.collections['references'].upsert(
                     ids=[ref_id],
-                    embeddings=[[1.0] * 384],  # Dummy embedding for exact match
+                    embeddings=[[1.0] * 1536],  # Dummy embedding for exact match (OpenAI dimension)
                     documents=[ref['url']],
                     metadatas=[{
                         'source_id': doc_id,
