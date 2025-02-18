@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class LinkService:
     """Manages link relationships and suggestions between notes."""
 
-    def __init__(self, vector_store):
+    def __init__(self, vector_store, chunking_service=None, embedding_service=None):
         """
         Initialize the link service.
 
@@ -19,6 +19,8 @@ class LinkService:
             vector_store: Instance of VectorStoreService for content queries
         """
         self.vector_store = vector_store
+        self.chunking_service = chunking_service or vector_store.chunking_service
+        self.embedding_service = embedding_service or vector_store.embedding_service
 
     def analyze_relationships(self, note_id: str) -> Dict[str, Any]:
         """
@@ -156,12 +158,16 @@ class LinkService:
                 updated = True
 
         if updated:
-            # Update the note content
-            chunks = self._rechunk_content(content)
-            embeddings = self._generate_embeddings(chunks)
+            # Update the note content using existing services
+            chunks = self.vector_store.chunking_service.chunk_document(
+                content,
+                doc_type="note"
+            )
+            chunk_texts = [chunk['content'] for chunk in chunks]
+            embeddings = self.vector_store.embedding_service.embed_chunks(chunk_texts)
             self.vector_store.update_document(
                 doc_id=note_id,
-                new_chunks=chunks,
+                new_chunks=chunk_texts,
                 new_embeddings=embeddings
             )
             logger.info(f"Updated links in note: {note_id}")
@@ -214,11 +220,15 @@ class LinkService:
             if backlink not in content:
                 content = content.replace("## Backlinks\n", f"## Backlinks\n{backlink}\n")
 
-        # Update target note
-        chunks = self._rechunk_content(content)
-        embeddings = self._generate_embeddings(chunks)
+        # Update target note using existing services
+        chunks = self.vector_store.chunking_service.chunk_document(
+            content,
+            doc_type="note"
+        )
+        chunk_texts = [chunk['content'] for chunk in chunks]
+        embeddings = self.vector_store.embedding_service.embed_chunks(chunk_texts)
         self.vector_store.update_document(
             doc_id=target_id,
-            new_chunks=chunks,
+            new_chunks=chunk_texts,
             new_embeddings=embeddings
         )
