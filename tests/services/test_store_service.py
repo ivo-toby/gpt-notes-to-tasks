@@ -30,8 +30,8 @@ SAMPLE_CHUNKS = [
 ]
 
 SAMPLE_EMBEDDINGS = [
-    [0.1] * 1536,  # OpenAI dimension
-    [0.2] * 1536
+    [0.1] * 1024,  # mxbai-embed-large dimension
+    [0.2] * 1024
 ]
 
 @pytest.fixture
@@ -73,6 +73,7 @@ def mock_embedding_service():
     """Create a mock embedding service."""
     mock = Mock()
     mock.embed_chunks.return_value = SAMPLE_EMBEDDINGS
+    mock.embed_text.return_value = [0.1] * 1024  # Add sample embedding for dimension check
     return mock
 
 @pytest.fixture
@@ -101,34 +102,15 @@ def mock_settings():
     return settings
 
 @pytest.fixture
-def vector_store(mock_chromadb_client, store_config):
+def vector_store(mock_chromadb_client, store_config, mock_embedding_service, mock_chunking_service):
     """Create a VectorStoreService instance with mocked dependencies."""
-    with patch('chromadb.PersistentClient', return_value=mock_chromadb_client), \
-         patch('os.path.expanduser', side_effect=lambda x: x), \
-         patch('os.makedirs', return_value=None):
-        service = VectorStoreService(store_config)
-
-        # Setup default return values for collections
-        service.collections["notes"].query.return_value = {
-            "ids": [["test-note_chunk_0"]],
-            "documents": [["Test content"]],
-            "metadatas": [[{"doc_id": "test-note", "chunk_index": 0, "doc_type": "note"}]],
-            "embeddings": [[[0.1] * 1536]]
-        }
-
-        service.metadata_collection.get.return_value = {
-            "ids": ["test-note"],
-            "metadatas": [{"modified_time": 123456789}]
-        }
-
-        service.collections["links"].query.return_value = {
-            "ids": ["link-1"],
-            "documents": [["Connected note"]],
-            "metadatas": [{"source_id": "test-note", "target_id": "connected-note"}],
-            "distances": [0.1]
-        }
-
-        return service
+    with patch("chromadb.PersistentClient", return_value=mock_chromadb_client):
+        store = VectorStoreService(
+            config=store_config,
+            chunking_service=mock_chunking_service,
+            embedding_service=mock_embedding_service
+        )
+        return store
 
 def test_initialization(vector_store, store_config):
     """Test initialization of collections and parameters."""
@@ -227,7 +209,7 @@ def test_get_note_content(vector_store):
     # Verify query was executed with correct parameters
     notes_collection = vector_store.collections["notes"]
     notes_collection.query.assert_called_once_with(
-        query_embeddings=[[1.0] * 1536],
+        query_embeddings=[[1.0] * 1024],
         where={"doc_id": "test-note"},
         include=["documents", "metadatas", "embeddings"]
     )
@@ -236,13 +218,13 @@ def test_get_note_content(vector_store):
     assert result == {
         "content": "Test content",
         "metadata": {"doc_id": "test-note", "chunk_index": 0, "doc_type": "note"},
-        "embedding": [0.1] * 1536
+        "embedding": [0.1] * 1024
     }
 
 def test_update_document(vector_store):
     """Test updating an existing document."""
     new_chunks = ["Updated content"]
-    new_embeddings = [[0.3] * 1536]
+    new_embeddings = [[0.3] * 1024]
 
     vector_store.update_document(
         doc_id="test-note",
@@ -300,7 +282,7 @@ def test_last_update_time(vector_store):
     vector_store.system_collection.upsert.assert_called_once_with(
         ids=["last_update"],
         metadatas=[{"timestamp": str(new_time)}],
-        embeddings=[[1.0] * 1536],
+        embeddings=[[1.0] * 1024],
         documents=[""]
     )
 
@@ -324,7 +306,7 @@ def test_error_handling(vector_store):
         vector_store.update_document(
             doc_id="test-note",
             new_chunks=["content"],
-            new_embeddings=[[0.1] * 1536]
+            new_embeddings=[[0.1] * 1024]
         )
 
 if __name__ == "__main__":

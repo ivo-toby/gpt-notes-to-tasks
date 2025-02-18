@@ -38,6 +38,10 @@ class VectorStoreService:
         )
         os.makedirs(self.db_path, exist_ok=True)
 
+        # Get embedding dimensions from the model
+        self.embedding_dims = self._get_embedding_dimensions()
+        logger.info(f"Using embedding dimensions: {self.embedding_dims}")
+
         # Get HNSW settings from config
         hnsw_config = self.config.get("hnsw_config", {})
 
@@ -126,7 +130,7 @@ class VectorStoreService:
                 self.system_collection.upsert,
                 ids=["last_update"],
                 metadatas=[{"timestamp": str(timestamp)}],
-                embeddings=[[1.0] * 1536],
+                embeddings=[[1.0] * self.embedding_dims],
                 documents=[""],
             )
         except Exception as e:
@@ -249,8 +253,8 @@ class VectorStoreService:
                 ids=[doc_id],
                 metadatas=[{"modified_time": metadata["modified_time"]}],
                 embeddings=[
-                    [1.0] * 1536
-                ],  # Dummy embedding for metadata tracking (OpenAI dimension)
+                    [1.0] * self.embedding_dims
+                ],  # Dummy embedding for metadata tracking
                 documents=[""],  # Empty document as it's just for tracking
             )
 
@@ -353,8 +357,8 @@ class VectorStoreService:
         # Query the links collection
         results = self.collections["links"].query(
             query_embeddings=[
-                [1.0] * 1536
-            ],  # Dummy embedding for exact match (OpenAI dimension)
+                [1.0] * self.embedding_dims
+            ],  # Dummy embedding for exact match
             where={"source_id": doc_id},
             include=["metadatas"],
         )
@@ -384,8 +388,8 @@ class VectorStoreService:
         """
         results = self.collections["links"].query(
             query_embeddings=[
-                [1.0] * 1536
-            ],  # Dummy embedding for exact match (OpenAI dimension)
+                [1.0] * self.embedding_dims
+            ],  # Dummy embedding for exact match
             where={"target_id": doc_id},
             include=["metadatas"],
         )
@@ -417,7 +421,7 @@ class VectorStoreService:
             logger.info(f"Retrieving content for note: {doc_id}")
             # First try exact match on doc_id
             results = self.collections["notes"].query(
-                query_embeddings=[[1.0] * 1536],  # Dummy embedding for exact match
+                query_embeddings=[[1.0] * self.embedding_dims],  # Dummy embedding for exact match
                 where={"doc_id": doc_id},
                 include=["documents", "metadatas", "embeddings"],
             )
@@ -572,8 +576,8 @@ class VectorStoreService:
                 self.collections["links"].upsert(
                     ids=[link_id],
                     embeddings=[
-                        [1.0] * 1536
-                    ],  # Dummy embedding for exact match (OpenAI dimension)
+                        [1.0] * self.embedding_dims
+                    ],  # Dummy embedding for exact match
                     documents=[""],  # No need to store text
                     metadatas=[
                         {
@@ -593,8 +597,8 @@ class VectorStoreService:
                 self.collections["references"].upsert(
                     ids=[ref_id],
                     embeddings=[
-                        [1.0] * 1536
-                    ],  # Dummy embedding for exact match (OpenAI dimension)
+                        [1.0] * self.embedding_dims
+                    ],  # Dummy embedding for exact match
                     documents=[ref["url"]],
                     metadatas=[
                         {
@@ -605,3 +609,13 @@ class VectorStoreService:
                         }
                     ],
                 )
+
+    def _get_embedding_dimensions(self) -> int:
+        """Get the embedding dimensions from the embedding model."""
+        if not self.embedding_service:
+            raise ValueError("Embedding service is required but not provided")
+
+        # Get a sample embedding to determine dimensions
+        sample_text = "Sample text to determine embedding dimensions"
+        sample_embedding = self.embedding_service.embed_text(sample_text)
+        return len(sample_embedding)
