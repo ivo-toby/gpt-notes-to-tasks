@@ -354,49 +354,110 @@ The items extracted to action items will be added to Apple Reminders with a dead
 - OpenAI API key (if using OpenAI embeddings)
 - Apple Reminders
 
-### Optional Dependencies (based on embedding model choice)
+### Performance Analysis: OpenAI vs Ollama mxbai-embed-large
 
-For OpenAI embeddings (default):
+We've conducted extensive testing comparing OpenAI's text-embedding-3-small with Ollama's mxbai-embed-large model. Here are our findings:
 
-- OpenAI API key
-- `pip install openai`
+1. **Similarity Scores & Relevance**:
+   - OpenAI embeddings: Scores typically range from 0.35-0.45
+   - mxbai-embed-large: Scores typically range from 0.60-0.65
+   - mxbai-embed-large showed better semantic understanding, especially for code snippets
+   - Higher scores with mxbai-embed-large correlate with more relevant results
 
-For HuggingFace models:
+2. **Content Chunking Behavior**:
+   - Current optimal settings:
+     ```yaml
+     chunking_config:
+       recursive:
+         chunk_size: 300  # Reduced for better focus
+         chunk_overlap: 100  # Increased for context
+         separators: ["\n\n", "\n### ", "\n## ", "\n# ", "\n", ". ", "? ", "! ", "; "]  # Respects document structure
+     ```
+   - These settings preserve code blocks and their context
+   - Headers stay with their content
+   - Natural breaks at paragraph and section boundaries
 
-- `pip install sentence-transformers`
-- CUDA-capable GPU (optional, for faster processing)
+3. **Search Thresholds**:
+   ```yaml
+   search:
+     thresholds:
+       default: 0.35  # Base threshold for content matching
+       tag_search: 0.30  # More lenient for tag matches
+       date_search: 0.30  # More lenient for date matches
+       content_search: 0.40  # Stricter for content searches
+   ```
 
-For Cohere embeddings:
+4. **Recommendations**:
+   - mxbai-embed-large performs notably better for technical content
+   - Local processing eliminates API costs and latency
+   - Better handling of code snippets and documentation
+   - More consistent chunking of technical content
 
-- Cohere API key
-- `pip install cohere`
+5. **Vector Store Maintenance**:
+   - Delete store and reindex when changing models:
+     ```bash
+     rm -rf ~/workspace/rd/cf-notes/.vector_store
+     python main.py kb --reindex
+     ```
+   - Monitor similarity scores to detect any drift
+   - Consider monthly reindexing for optimal performance
 
-For Ollama (local models):
+
+
+### Recommended Model Configuration
+
+For optimal results with technical content and code snippets, we recommend using Ollama with mxbai-embed-large:
+
+```yaml
+# config.yaml
+embeddings:
+  model_type: "ollama"
+  model_name: "mxbai-embed-large:latest"
+  batch_size: 100
+  ollama_config:
+    base_url: "http://localhost:11434"
+    num_ctx: 512
+    num_thread: 4
+
+chunking_config:
+  recursive:
+    chunk_size: 300
+    chunk_overlap: 100
+    separators: ["\n\n", "\n### ", "\n## ", "\n# ", "\n", ". ", "? ", "! ", "; "]
+
+search:
+  thresholds:
+    default: 0.35
+    tag_search: 0.30
+    date_search: 0.30
+    content_search: 0.40
+```
+
+To use this configuration:
 
 1. Install Ollama:
    ```bash
    # macOS/Linux
    curl https://ollama.ai/install.sh | sh
    ```
-2. Start the Ollama service:
+
+2. Start Ollama service:
    ```bash
    ollama serve
    ```
-3. Pull your desired embedding model:
 
+3. Pull the model:
    ```bash
-   # For general text embeddings
-   ollama pull nomic-embed-text
-
-   # For code-specific embeddings
-   ollama pull codellama
+   ollama pull mxbai-embed-large
    ```
 
-## Installation
+4. Update your config.yaml with the above settings
 
-1. Clone the repository.
-2. Install the required Python packages: `pip install -r requirements.txt`.
-3. Configure the script by editing the `config.yaml` file.
+5. Reindex your knowledge base:
+   ```bash
+   rm -rf ~/workspace/rd/cf-notes/.vector_store
+   python main.py kb --reindex
+   ```
 
 ## Configuration
 
