@@ -55,26 +55,24 @@ class ChunkingService:
             List of chunks with metadata
         """
         try:
+            # Split into initial chunks
             chunks = self.text_splitter.split_text(content)
-            logger.info(f"Created {len(chunks)} chunks")
+            logger.info(f"Created {len(chunks)} initial chunks")
 
+            # Further split any chunks that exceed the size limit
             result = []
             for i, chunk in enumerate(chunks, 1):
-                chunk_metadata = {
-                    "title": f"{title or 'Chunk'} (Part {i})",
-                    "char_count": len(chunk),
-                    "doc_type": doc_type,
-                    "doc_title": title,
-                    "tags": tags or [],
-                }
-
-                # Add relevant frontmatter fields
-                if frontmatter:
-                    for key, value in frontmatter.items():
-                        if key not in ["content", "title", "tags"]:
-                            chunk_metadata[f"frontmatter_{key}"] = value
-
-                result.append({"content": chunk, "metadata": chunk_metadata})
+                # If chunk exceeds size limit, split it further
+                if len(chunk) > self.chunk_size:
+                    subchunks = [chunk[i:i + self.chunk_size] 
+                               for i in range(0, len(chunk), self.chunk_size)]
+                    for j, subchunk in enumerate(subchunks, 1):
+                        chunk_num = f"{i}.{j}"
+                        self._add_chunk_to_result(result, subchunk, doc_type, title, 
+                                                tags, frontmatter, chunk_num)
+                else:
+                    self._add_chunk_to_result(result, chunk, doc_type, title, 
+                                            tags, frontmatter, str(i))
 
             return result
 
@@ -92,3 +90,29 @@ class ChunkingService:
                     },
                 }
             ]
+    def _add_chunk_to_result(
+        self, 
+        result: List[Dict[str, Any]], 
+        chunk: str,
+        doc_type: str,
+        title: str,
+        tags: List[str],
+        frontmatter: Dict[str, Any],
+        chunk_num: str
+    ) -> None:
+        """Add a chunk with its metadata to the result list."""
+        chunk_metadata = {
+            "title": f"{title or 'Chunk'} (Part {chunk_num})",
+            "char_count": len(chunk),
+            "doc_type": doc_type,
+            "doc_title": title,
+            "tags": tags or [],
+        }
+
+        # Add relevant frontmatter fields
+        if frontmatter:
+            for key, value in frontmatter.items():
+                if key not in ["content", "title", "tags"]:
+                    chunk_metadata[f"frontmatter_{key}"] = value
+
+        result.append({"content": chunk, "metadata": chunk_metadata})
