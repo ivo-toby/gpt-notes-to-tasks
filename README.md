@@ -70,7 +70,7 @@ git commit -m "Initial notes structure"
 1. Clone this tool repository:
 
    ```bash
-   git clone https://github.com/yourusername/gpt-notes-to-tasks.git
+   git clone https://github.com/ivo-toby/gpt-notes-to-tasks.git
    cd gpt-notes-to-tasks
    ```
 
