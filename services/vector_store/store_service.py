@@ -307,9 +307,8 @@ class VectorStoreService:
             # Format results
             similar_docs = []
             for i in range(len(results["ids"][0])):
-                similarity = (
-                    1 - results["distances"][0][i]
-                )  # Convert distance to similarity
+                # For OpenAI embeddings, the distance is already a similarity score
+                similarity = results["distances"][0][i]
                 if threshold and similarity < threshold:
                     logger.info(
                         f"Skipping result with similarity {similarity:.3f} below threshold {threshold}"
