@@ -1,5 +1,7 @@
 # Obsidian Copilot Backend
 
+![](agent.jpeg)
+
 This Python script is a note summarizer that processes daily, weekly, and meeting notes. It uses the OpenAI API to summarize notes, identify tasks, and maintain a semantic knowledge base.
 It can extract action items and add them to the Apple Reminders App, extract learnings with auto-generated tags, and find semantically similar content across all your notes.
 The script accepts several command-line arguments to customize its behavior.
