@@ -11,11 +11,21 @@ Based on timestamped notes in a single file it can:
 
 - Generate a daily summary, including tags and actionable items
 - Create a weekly summary (including accomplishments and learnings)
-- Extract meeting notes
+- Extract and structure meeting notes automatically
 - Extract action items and add them to the Apple Reminders App
-- Extract learnings and generate tags for each of the learnings
-- Build and maintain a semantic knowledge base of your notes
-- Find related content across all your notes using semantic search
+- Extract learnings with auto-generated titles and tags
+- Build and maintain a semantic knowledge base of your notes using:
+  - OpenAI embeddings (text-embedding-3-small)
+  - Local Ollama embeddings (mxbai-embed-large recommended)
+- Find semantically similar content across all notes with configurable thresholds
+- Analyze note relationships and suggest connections
+- Auto-generate wiki-style links between related notes
+- Create backlinks automatically
+- Visualize note connections in graph format
+- Support different note types (daily, weekly, meeting, learning)
+- Preserve markdown structure and code blocks during processing
+- Handle batch processing of notes with configurable chunk sizes
+- Support incremental updates to the knowledge base
 
 _Please note_
 
