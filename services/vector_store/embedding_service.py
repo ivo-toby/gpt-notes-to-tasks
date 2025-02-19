@@ -83,6 +83,12 @@ class EmbeddingService:
         """
         try:
             embeddings = self.model.embed_query(text)
+            # Normalize OpenAI embeddings
+            if self.model_type == "openai":
+                import numpy as np
+                embeddings = np.array(embeddings)
+                embeddings = embeddings / np.linalg.norm(embeddings)
+                embeddings = embeddings.tolist()
             return embeddings
         except Exception as e:
             logger.error(f"Error generating embedding: {str(e)}")
@@ -117,6 +123,13 @@ class EmbeddingService:
             ):
                 batch = chunks[i : i + self.batch_size]
                 batch_embeddings = self.model.embed_documents(batch)
+                # Normalize OpenAI embeddings
+                if self.model_type == "openai":
+                    import numpy as np
+                    batch_embeddings = [
+                        (np.array(emb) / np.linalg.norm(np.array(emb))).tolist()
+                        for emb in batch_embeddings
+                    ]
                 all_embeddings.extend(batch_embeddings)
             return all_embeddings
         except Exception as e:
