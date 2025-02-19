@@ -28,14 +28,14 @@ knowledge_base:
 
 # Vector store settings
 vector_store:
-  path: "~/Documents/notes/.vector_store" # Local ChromaDB storage
+  similarity_threshold: 0.60
+  hnsw_config:
+    ef_construction: 800    # Increase from default 400
+    ef_search: 400         # Increase from default 200
+    m: 256                # Increase from default 128
+  path: "~/.vector_store" # Local ChromaDB storage
   chunk_size_min: 50 # Minimum characters per chunk
   chunk_size_max: 500 # Maximum characters per chunk
-  similarity_threshold: 0.85 # Minimum similarity score for matches
-  hnsw_config:
-    ef_construction: 400 # Controls index build quality (higher = better, but slower)
-    ef_search: 200 # Controls search quality (higher = better, but slower)
-    m: 128 # Number of connections per element (higher = better recall, more memory)
 
 # Embeddings configuration
 embeddings:

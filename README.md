@@ -233,11 +233,14 @@ embeddings:
 vector_store:
   path: "~/Documents/notes/.vector_store"
   similarity_threshold: 0.60  # For normalized embeddings
+  # HNSW index settings - adjust if you get "ef or M is too small" errors
   hnsw_config:
-    ef_construction: 400
-    ef_search: 200
-    m: 128
+    ef_construction: 800  # Higher = better index quality, slower build (default: 400)
+    ef_search: 400      # Higher = more accurate search, slower queries (default: 200)
+    m: 256             # Higher = better accuracy, more memory usage (default: 128)
 ```
+
+If you're processing a large number of notes or getting HNSW errors, try increasing these values.
 
 ### Search Thresholds
 
