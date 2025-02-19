@@ -1,4 +1,4 @@
-# Obsidian Copilot Backend
+# Obsidian Autopilot Backend
 
 ![](agent.jpeg)
 
