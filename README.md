@@ -1,8 +1,9 @@
-# Daily Notes AI Summarization
+# Obsidian Copilot Backend
 
 This Python script is a note summarizer that processes daily, weekly, and meeting notes. It uses the OpenAI API to summarize notes, identify tasks, and maintain a semantic knowledge base.
 It can extract action items and add them to the Apple Reminders App, extract learnings with auto-generated tags, and find semantically similar content across all your notes.
 The script accepts several command-line arguments to customize its behavior.
+It will provide you with knowledgebase functions that builds a semantic database from your notes and is able to link your notes together based on that. With the graph view in Obsidian you'll soon have a full second brain with lots and lots of interesting links and information.
 
 ## What does it do?
 
@@ -359,35 +360,49 @@ The items extracted to action items will be added to Apple Reminders with a dead
 We've conducted extensive testing comparing OpenAI's text-embedding-3-small with Ollama's mxbai-embed-large model. Here are our findings:
 
 1. **Similarity Scores & Relevance**:
+
    - OpenAI embeddings: Scores typically range from 0.35-0.45
    - mxbai-embed-large: Scores typically range from 0.60-0.65
    - mxbai-embed-large showed better semantic understanding, especially for code snippets
    - Higher scores with mxbai-embed-large correlate with more relevant results
 
 2. **Content Chunking Behavior**:
+
    - Current optimal settings:
      ```yaml
      chunking_config:
        recursive:
-         chunk_size: 300  # Reduced for better focus
-         chunk_overlap: 100  # Increased for context
-         separators: ["\n\n", "\n### ", "\n## ", "\n# ", "\n", ". ", "? ", "! ", "; "]  # Respects document structure
+         chunk_size: 300 # Reduced for better focus
+         chunk_overlap: 100 # Increased for context
+         separators: [
+             "\n\n",
+             "\n### ",
+             "\n## ",
+             "\n# ",
+             "\n",
+             ". ",
+             "? ",
+             "! ",
+             "; ",
+           ] # Respects document structure
      ```
    - These settings preserve code blocks and their context
    - Headers stay with their content
    - Natural breaks at paragraph and section boundaries
 
 3. **Search Thresholds**:
+
    ```yaml
    search:
      thresholds:
-       default: 0.35  # Base threshold for content matching
-       tag_search: 0.30  # More lenient for tag matches
-       date_search: 0.30  # More lenient for date matches
-       content_search: 0.40  # Stricter for content searches
+       default: 0.35 # Base threshold for content matching
+       tag_search: 0.30 # More lenient for tag matches
+       date_search: 0.30 # More lenient for date matches
+       content_search: 0.40 # Stricter for content searches
    ```
 
 4. **Recommendations**:
+
    - mxbai-embed-large performs notably better for technical content
    - Local processing eliminates API costs and latency
    - Better handling of code snippets and documentation
@@ -401,8 +416,6 @@ We've conducted extensive testing comparing OpenAI's text-embedding-3-small with
      ```
    - Monitor similarity scores to detect any drift
    - Consider monthly reindexing for optimal performance
-
-
 
 ### Recommended Model Configuration
 
@@ -423,7 +436,8 @@ chunking_config:
   recursive:
     chunk_size: 300
     chunk_overlap: 100
-    separators: ["\n\n", "\n### ", "\n## ", "\n# ", "\n", ". ", "? ", "! ", "; "]
+    separators:
+      ["\n\n", "\n### ", "\n## ", "\n# ", "\n", ". ", "? ", "! ", "; "]
 
 search:
   thresholds:
@@ -436,17 +450,20 @@ search:
 To use this configuration:
 
 1. Install Ollama:
+
    ```bash
    # macOS/Linux
    curl https://ollama.ai/install.sh | sh
    ```
 
 2. Start Ollama service:
+
    ```bash
    ollama serve
    ```
 
 3. Pull the model:
+
    ```bash
    ollama pull mxbai-embed-large
    ```

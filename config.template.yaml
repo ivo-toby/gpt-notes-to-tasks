@@ -10,8 +10,9 @@ chunking_model: "gpt-4o-mini"
 learnings_file: "~/Documents/notes/jrnl/learnings.md"
 learnings_output_dir: "~/Documents/notes/learnings"
 
-# Notes directory for knowledge base
 notes_base_dir: "~/Documents/notes" # Base directory for all notes
+
+# Knowledge base settings
 knowledge_base:
   exclude_patterns:
     - "*.excalidraw.md" # Exclude Excalidraw files
@@ -19,6 +20,11 @@ knowledge_base:
     - ".obsidian/*" # Exclude Obsidian config
     - ".trash/*" # Exclude trash
     - ".git/*" # Exclude git directory
+    - ".smart-connections" # Exclude third-party plugin data
+    - ".smart-env"
+    - ".tmp.drivedownload"
+    - ".tmp.driveupload"
+    - ".vector_store"
 
 # Vector store settings
 vector_store:
@@ -27,25 +33,37 @@ vector_store:
   chunk_size_max: 500 # Maximum characters per chunk
   similarity_threshold: 0.85 # Minimum similarity score for matches
   hnsw_config:
-    ef_construction: 200 # Controls index build quality (higher = better, but slower)
-    ef_search: 100 # Controls search quality (higher = better, but slower)
-    m: 64 # Number of connections per element (higher = better recall, more memory)
-    max_elements: 1000000 # Maximum number of elements in the index
+    ef_construction: 400 # Controls index build quality (higher = better, but slower)
+    ef_search: 200 # Controls search quality (higher = better, but slower)
+    m: 128 # Number of connections per element (higher = better recall, more memory)
+
+# Embeddings configuration
+embeddings:
+  model_type: "ollama" # Options: openai, huggingface, huggingface_instruct, cohere, ollama
+  model_name: "mxbai-embed-large" # Model name for the selected type
+  batch_size: 100 # Number of texts to embed at once
+  # Ollama-specific configuration
+  ollama_config:
+    base_url: "http://localhost:11434"
+    num_ctx: 512
+    num_thread: 4 # Adjust based on your CPU cores if needed
 
 # Chunking configuration
 chunking_config:
   recursive:
-    chunk_size: 500 # Maximum characters per chunk
-    chunk_overlap: 50 # Number of characters to overlap between chunks
+    chunk_size: 300 # Reduced for better focus
+    chunk_overlap: 100 # Increased for context
+    separators: ["\n\n", "\n### ", "\n## ", "\n# ", "\n", ". ", "? ", "! ", "; "] # Natural breaks
 
 # Search settings
 search:
   default_limit: 10 # Default number of results to return
   preview_length: 200 # Number of characters to show in previews
   thresholds:
-    default: 0.85 # Default similarity threshold
-    tag_search: 0.5 # Threshold for tag-based searches
-    date_search: 0.5 # Threshold for date-based searches
+    default: 0.35 # Only show results with >35% similarity
+    tag_search: 0.30 # More lenient threshold for tag searches
+    date_search: 0.30 # More lenient threshold for date searches
+    content_search: 0.40 # Stricter threshold for content searches
 
 # Display settings
 display:
