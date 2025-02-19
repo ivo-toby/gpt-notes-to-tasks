@@ -102,7 +102,7 @@ git commit -m "Initial notes structure"
    # Start Ollama service
    ollama serve
    # Pull embedding model
-   ollama pull nomic-embed-text
+   ollama pull mxbai-embed-large
    ```
 
 ### 3. Configure the Tool
@@ -128,12 +128,12 @@ git commit -m "Initial notes structure"
 
    # For OpenAI
    api_key: "your-api-key" # Required for OpenAI embeddings
-   model: "gpt-4" # or gpt-3.5-turbo for lower cost
+   model: "gpt-4o" # or gpt-4o-mini lower cost
 
    # For local embeddings (recommended)
    embeddings:
      model_type: "ollama"
-     model_name: "nomic-embed-text"
+     model_name: "mxbai-embed-large"
      ollama_config:
        base_url: "http://localhost:11434"
        num_ctx: 512
@@ -560,12 +560,12 @@ embeddings:
     num_ctx: 512
     num_thread: 4
 vector_store:
-  similarity_threshold: -250.0  # Less negative = stricter matching
+  similarity_threshold: 0.5  # Less negative = stricter matching
 search:
   thresholds:
-    default: -250.0
-    tag_search: -300.0  # More lenient for tag searches
-    date_search: -300.0  # More lenient for date searches
+    default: 0.5
+    tag_search: 0.4  # More lenient for tag searches
+    date_search: 0.3  # More lenient for date searches
 
 # Local HuggingFace model (normalized)
 embeddings:
