@@ -112,6 +112,40 @@ class VectorStoreService:
             logger.error(f"Error initializing vector store collections: {str(e)}")
             raise
 
+    def clear_all_collections(self) -> None:
+        """Clear all data from all collections by deleting and recreating them."""
+        try:
+            logger.info("Clearing all collections...")
+            
+            # Delete and recreate each collection
+            for name, old_collection in self.collections.items():
+                collection_metadata = old_collection.metadata
+                self.client.delete_collection(name)
+                self.collections[name] = self.client.create_collection(
+                    name=name,
+                    metadata=collection_metadata
+                )
+                logger.info(f"Cleared collection: {name}")
+            
+            # Handle system and metadata collections
+            self.client.delete_collection("system")
+            self.client.delete_collection("metadata")
+            
+            # Recreate system and metadata collections with original settings
+            self.system_collection = self.client.create_collection(
+                name="system",
+                metadata={"description": "System-level metadata and tracking"}
+            )
+            self.metadata_collection = self.client.create_collection(
+                name="metadata",
+                metadata={"description": "Document metadata and update tracking"}
+            )
+            
+            logger.info("Successfully cleared and recreated all collections")
+        except Exception as e:
+            logger.error(f"Error clearing collections: {str(e)}")
+            raise
+
     def get_last_update_time(self) -> float:
         """Get the timestamp of the last update operation."""
         try:

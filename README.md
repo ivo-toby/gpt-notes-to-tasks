@@ -2,608 +2,352 @@
 
 ![](agent.jpeg)
 
-This Python script is a note summarizer that processes daily, weekly, and meeting notes. It uses the OpenAI API to summarize notes, identify tasks, and maintain a semantic knowledge base.
-It can extract action items and add them to the Apple Reminders App, extract learnings with auto-generated tags, and find semantically similar content across all your notes.
-The script accepts several command-line arguments to customize its behavior.
-It will provide you with knowledgebase functions that builds a semantic database from your notes and is able to link your notes together based on that. With the graph view in Obsidian you'll soon have a full second brain with lots and lots of interesting links and information.
+A Python tool for processing and enriching your Obsidian notes, providing automatic summarization, task extraction, and semantic knowledge base features.
 
-## What does it do?
+## Key Features
 
-Based on timestamped notes in a single file it can:
+- **Note Processing**
+  - Generate daily and weekly summaries
+  - Extract and structure meeting notes
+  - Identify action items and add them to Apple Reminders
+  - Extract learnings with auto-generated tags
 
-- Generate a daily summary, including tags and actionable items
-- Create a weekly summary (including accomplishments and learnings)
-- Extract and structure meeting notes automatically
-- Extract action items and add them to the Apple Reminders App
-- Extract learnings with auto-generated titles and tags
-- Build and maintain a semantic knowledge base of your notes using:
-  - OpenAI embeddings (text-embedding-3-small)
-  - Local Ollama embeddings (mxbai-embed-large recommended)
-- Find semantically similar content across all notes with configurable thresholds
-- Analyze note relationships and suggest connections
-- Auto-generate wiki-style links between related notes
-- Create backlinks automatically
-- Visualize note connections in graph format
-- Support different note types (daily, weekly, meeting, learning)
-- Preserve markdown structure and code blocks during processing
-- Handle batch processing of notes with configurable chunk sizes
-- Support incremental updates to the knowledge base
+- **Knowledge Base**
+  - Build semantic connections between notes
+  - Support for OpenAI or local Ollama embeddings
+  - Auto-generate wiki-style links
+  - Create backlinks automatically
+  - Visualize note connections in graph format
 
-_Please note_
+## Installation
 
-This script has been entirely created by CodeLLama, GPT-4o, Claude 3.5 Sonnet and Gemini 2 Flash using Anthropic MCP, Cursor and aider.chat.
+### Prerequisites
 
-## Getting Started
+- Python 3.x
+- OpenAI API key (if using OpenAI embeddings)
+- Apple Reminders (optional, for task integration)
 
-This guide will help you set up and run the script safely with your notes.
+### Quick Start
 
-### 1. Prepare Your Notes Repository
-
-First, set up a Git repository for your notes (recommended):
-
-```bash
-# Create a new directory for your notes
-mkdir ~/Documents/notes
-cd ~/Documents/notes
-
-# Initialize git repository
-git init
-
-# Create basic structure
-mkdir daily weekly meetingnotes learnings
-touch .gitignore
-
-# Add recommended entries to .gitignore
-cat << EOF > .gitignore
-.vector_store/
-.obsidian/
-.trash/
-*.excalidraw.md
-.DS_Store
-EOF
-
-# Initial commit
-git add .
-git commit -m "Initial notes structure"
-```
-
-### 2. Install Dependencies
-
-1. Clone this tool repository:
-
+1. Clone the repository:
    ```bash
    git clone https://github.com/ivo-toby/gpt-notes-to-tasks.git
    cd gpt-notes-to-tasks
    ```
 
-2. Create and activate a virtual environment:
-
+2. Create and activate virtual environment:
    ```bash
-   # Using venv (recommended)
    python -m venv .venv
    source .venv/bin/activate  # On Unix/macOS
    # or
    .venv\Scripts\activate  # On Windows
    ```
 
-3. Install required packages:
-
+3. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-4. Install embedding model dependencies (choose one):
-
+4. Set up configuration:
    ```bash
-   # For OpenAI (default)
-   pip install openai
-
-   # For local models with Ollama (recommended for privacy)
-   # First install Ollama
-   curl https://ollama.ai/install.sh | sh
-   # Start Ollama service
-   ollama serve
-   # Pull embedding model
-   ollama pull mxbai-embed-large
-   ```
-
-### 3. Configure the Tool
-
-1. Create your configuration:
-
-   ```bash
-   # Copy template
    cp config.template.yaml config.yaml
+   # Edit config.yaml with your settings
    ```
 
-2. Edit `config.yaml` with your settings:
+## CLI Reference
 
-   ```yaml
-   # Essential settings
-   notes_base_dir: "~/Documents/notes" # Your notes directory
-   daily_notes_file: "~/Documents/notes/daily/daily.md"
-   daily_output_dir: "~/Documents/notes/daily"
-   weekly_output_dir: "~/Documents/notes/weekly"
-   meeting_notes_output_dir: "~/Documents/notes/meetingnotes"
-   learnings_file: "~/Documents/notes/learnings/learnings.md"
-   learnings_output_dir: "~/Documents/notes/learnings"
+### Daily Notes Commands
 
-   # For OpenAI
-   api_key: "your-api-key" # Required for OpenAI embeddings
-   model: "gpt-4o" # or gpt-4o-mini lower cost
+```bash
+# Process today's notes
+python main.py notes
 
-   # For local embeddings (recommended)
-   embeddings:
-     model_type: "ollama"
-     model_name: "mxbai-embed-large"
-     ollama_config:
-       base_url: "http://localhost:11434"
-       num_ctx: 512
-       num_thread: 4
-   ```
+# Process notes for a specific date
+python main.py notes --date 2024-02-16
 
-### 4. First Run
+# Process yesterday's notes
+python main.py notes --date yesterday
 
-1. Test with dry run (safe, no changes):
+# Generate weekly summary
+python main.py notes --weekly
 
+# Process meeting notes only
+python main.py notes --meetingnotes
+
+# Process learnings only
+python main.py notes --process-learnings
+```
+
+Options:
+- `--date`: Specify date (YYYY-MM-DD, "today", or "yesterday")
+- `--dry-run`: Preview changes without making modifications
+- `--skip-reminders`: Don't create Apple Reminders tasks
+- `--replace-summary`: Replace existing summaries instead of updating
+
+### Knowledge Base Commands
+
+```bash
+# Initialize knowledge base
+python main.py kb --reindex
+
+# Update with recent changes
+python main.py kb --update
+
+# Search knowledge base
+python main.py kb --query "your search query"
+
+# Search by tag
+python main.py kb --find-by-tag "tag-name"
+
+# Search by date
+python main.py kb --find-by-date "2024-02-16"
+
+# Analyze single note relationships
+python main.py kb --analyze-links "path/to/note.md"
+
+# Show note connections
+python main.py kb --show-connections "path/to/note.md"
+
+# Analyze and auto-link all notes
+python main.py kb --analyze-all
+
+# Analyze only recently modified notes
+python main.py kb --analyze-updated
+
+# View note's semantic structure
+python main.py kb --note-structure "path/to/note.md"
+```
+
+Options:
+- `--limit`: Maximum number of results (default: 5)
+- `--dry-run`: Preview changes without modifications
+- `--note-type`: Filter by note type (daily, weekly, meeting, learning, note)
+- `--graph`: Display connections in graph format (if configured)
+- `--auto-link`: Automatically add suggested links without prompting
+
+## Common Commands & Howto
+
+### Daily Note Taking Workflow
+
+1. Start your day by processing yesterday's notes:
    ```bash
-   # Test daily notes processing
-   python main.py notes --dry-run
-
-   # Test knowledge base indexing
-   python main.py kb --reindex --dry-run
-   ```
-
-2. Initialize knowledge base:
-
-   ```bash
-   # Build initial index
-   python main.py kb --reindex
-   ```
-
-3. Test search functionality:
-   ```bash
-   # Try searching
-   python main.py kb --query "test query"
-   ```
-
-### 5. Regular Usage
-
-1. Set up daily note taking:
-
-   ```bash
-   # Add to your .zshrc or .bashrc
-   alias daily="jrnl daily"  # If using jrnl
-   # or
-   alias daily="nvim ~/Documents/notes/daily/daily.md"
-   ```
-
-2. Recommended workflow:
-
-   ```bash
-   # Morning: Review yesterday's notes
    python main.py notes --date yesterday
+   ```
 
-   # Process specific date
-   python main.py notes --date 2024-02-16
+2. Throughout the day, take notes in your daily notes file
 
-   # Process today's notes (default)
+3. End of day processing:
+   ```bash
+   # Process today's notes and create summaries
    python main.py notes
-
-   # Weekly: Generate summary
-   python main.py notes --weekly
-
-   # Periodically: Update knowledge base
+   
+   # Update knowledge base with new content
    python main.py kb --update
+   
+   # Analyze new connections
+   python main.py kb --analyze-updated --auto-link
    ```
 
-   The `--date` option accepts:
+### Weekly Review Process
 
-   - `yesterday` for the previous day
-   - `today` for the current day (default)
-   - A specific date in YYYY-MM-DD format (e.g., "2024-02-16")
-
-3. Git backup routine:
+1. Generate weekly summary:
    ```bash
-   # Add to your daily routine
-   cd ~/Documents/notes
-   git add .
-   git commit -m "Daily notes update: $(date '+%Y-%m-%d')"
-   git push  # If using remote repository
+   python main.py notes --weekly
    ```
 
-### 6. Maintenance Best Practices
-
-1. Regular backups:
-
-   - Keep your notes in git
-   - Consider using a private GitHub/GitLab repository
-   - Regularly push changes
-
-2. Vector store maintenance:
-
+2. Process learnings:
    ```bash
-   # Monthly: Rebuild index to optimize
+   python main.py notes --process-learnings
+   ```
+
+3. Update knowledge connections:
+   ```bash
+   python main.py kb --analyze-all --auto-link
+   ```
+
+### Knowledge Base Maintenance
+
+1. Regular updates (daily/after changes):
+   ```bash
+   python main.py kb --update
+   python main.py kb --analyze-updated
+   ```
+
+2. Full reindex (monthly or after major changes):
+   ```bash
    rm -rf ~/Documents/notes/.vector_store
    python main.py kb --reindex
+   python main.py kb --analyze-all --auto-link
    ```
 
-3. Monitor and adjust:
-   - Watch similarity scores in search results
-   - Adjust thresholds if needed
-   - Keep dependencies updated
-
-### 7. Troubleshooting
-
-If you encounter issues:
-
-1. Check logs:
-
+3. Finding Related Content:
    ```bash
-   # Enable debug logging
-   sed -i 's/level: "INFO"/level: "DEBUG"/' config.yaml
+   # Search by content
+   python main.py kb --query "project planning" --limit 10
+   
+   # Find notes with specific tag
+   python main.py kb --find-by-tag "project" --note-type meeting
+   
+   # Show connections for a note
+   python main.py kb --show-connections "path/to/note.md" --graph
    ```
 
-2. Verify embeddings:
+### Troubleshooting Command
 
-   ```bash
-   # Test embedding service
-   python main.py kb --query "test" --debug
-   ```
+Analyze note structure to understand how it's being processed:
+```bash
+python main.py kb --note-structure "path/to/note.md"
+```
 
-3. Common fixes:
-   - Clear vector store: `rm -rf ~/Documents/notes/.vector_store`
-   - Reindex: `python main.py kb --reindex`
-   - Check Ollama service: `curl http://localhost:11434/api/embeddings`
+## Configuration
 
-## Why this script
-
-This script allows me to summarize my day, identify action items and add them to my reminders, so I can keep track of what I need to do.
-I use jrnl (https://jrnl.sh/) to write daily notes during my work day, it's easy and entirely terminal based, which allows for quickly jotting down ideas, notes, quotes and report meetings. I have configured an alias for jrnl, called `daily` which opens neovim and adds everything I jot down to a single file prefixed with a timestamp. This is the jrnl config I use:
+Copy `config.template.yaml` to `config.yaml` and configure your settings:
 
 ```yaml
-   1   │ colors:
-   2   │   body: none
-   3   │   date: black
-   4   │   tags: yellow
-   5   │   title: cyan
-   6   │ default_hour: 9
-   7   │ default_minute: 0
-   8   │ editor: nvim -f
-   9   │ encrypt: false
-  10   │ highlight: true
-  11   │ indent_character: "|"
-  12   │ journals:
-  13   │   daily:
-  14   │     journal: ~/Documents/notes/jrnl/daily.md
-  15   │   default:
-  16   │     journal: ~/Documents/notes/jrnl/journal.md
-  19   │   idea:
-  20   │     journal: ~/Documents/notes/jrnl/ideas.md
-  23   │ linewrap: 79
-  24   │ tagsymbols: "#@"
-  25   │ template: false
-  26   │ timeformat: "%F %r"
-  27   │ version: v4.1
-```
+# Essential paths
+notes_base_dir: "~/Documents/notes"
+daily_notes_file: "~/Documents/notes/daily/daily.md"
+daily_output_dir: "~/Documents/notes/daily"
+weekly_output_dir: "~/Documents/notes/weekly"
+meeting_notes_output_dir: "~/Documents/notes/meetingnotes"
+learnings_file: "~/Documents/notes/learnings/learnings.md"
+learnings_output_dir: "~/Documents/notes/learnings"
 
-The zsh-alias to quickly start a daily note;
+# OpenAI settings (if using OpenAI embeddings)
+api_key: "your-api-key"
+model: "gpt-4o"
 
-```
-alias daily="jrnl daily"
-```
-
-At the end of the day the file containing notes would look like this:
-
-```
-[2024-05-18 08:45:32 AM] started the day by reviewing the sprint backlog. Identified key tasks to tackle using Trello.
-
-[2024-05-18 11:12:09 AM] debugged the API integration issues with the new payment gateway.
-
-[2024-05-18 12:30:44 PM] had a quick sync with the UX team to finalize the design for the new dashboard feature.
-
-[2024-05-18 02:15:20 PM] attended the bi-weekly planning meeting. Discussed the priorities for the next sprint.
-
-[2024-05-18 03:47:18 PM] researched optimization techniques for the search algorithm. Found some promising approaches using Elasticsearch.
-
-[2024-05-18 04:25:51 PM] created a prototype for the new notification system. Need to test it with real user data next week.
-
-[2024-05-18 05:08:33 PM] updated the project documentation to reflect the recent changes in the architecture.
-
-[2024-05-18 06:22:54 PM] set up automated tests for the new microservices. This should help catch issues earlier in the development cycle.
-
-[2024-05-18 06:45:10 PM] ended the day by reviewing PRs and providing feedback to the team.
-
-[2024-05-19 09:10:13 AM] started the morning with a team stand-up meeting. Discussed blockers and progress.
-
-[2024-05-19 10:55:48 AM] worked on refactoring the legacy codebase to improve maintainability.
-
-[2024-05-19 12:15:30 PM] joined a webinar on the latest trends in AI and machine learning. Took notes for later review.
-```
-
-If you'd use the script on this journal like this:
-
-`python main.py notes --skip-reminders --dry-run`
-
-This would be the generated output:
-
----
-
-## Summary
-
-[08:45:32 AM] Reviewed sprint backlog and identified key tasks using Trello.
-
-[11:12:09 AM] Debugged API integration issues with new payment gateway.
-
-[12:30:44 PM] Synced with UX team to finalize dashboard feature design.
-
-[02:15:20 PM] Discussed next sprint priorities in bi-weekly planning meeting.
-
-[03:47:18 PM] Researched search algorithm optimization techniques using Elasticsearch.
-
-[04:25:51 PM] Created prototype for new notification system; planning to test with real user data next week.
-
-[05:08:33 PM] Updated project documentation to reflect recent architecture changes.
-
-[06:22:54 PM] Set up automated tests for new microservices to catch issues earlier in development.
-
-[06:45:10 PM] Reviewed PRs and provided feedback to team.
-
-## Tags:
-
-#sprint_backlog #api_integration #ux_design #sprint_planning #search_optimization #notification_system #project_documentation #automated_testing #code_review
-
-## Action Items:
-
-- Test the new notification system with real user data next week.
-
----
-
-The items extracted to action items will be added to Apple Reminders with a deadline of next morning 0900.
-
-## Prerequisites
-
-- Python 3.x
-- OpenAI API key (if using OpenAI embeddings)
-- Apple Reminders
-
-### Performance Analysis: OpenAI vs Ollama mxbai-embed-large
-
-We've conducted extensive testing comparing OpenAI's text-embedding-3-small with Ollama's mxbai-embed-large model. Here are our findings:
-
-1. **Similarity Scores & Relevance**:
-
-   - OpenAI embeddings: Scores typically range from 0.35-0.45
-   - mxbai-embed-large: Scores typically range from 0.60-0.65
-   - mxbai-embed-large showed better semantic understanding, especially for code snippets
-   - Higher scores with mxbai-embed-large correlate with more relevant results
-
-2. **Content Chunking Behavior**:
-
-   - Current optimal settings:
-     ```yaml
-     chunking_config:
-       recursive:
-         chunk_size: 300 # Reduced for better focus
-         chunk_overlap: 100 # Increased for context
-         separators: [
-             "\n\n",
-             "\n### ",
-             "\n## ",
-             "\n# ",
-             "\n",
-             ". ",
-             "? ",
-             "! ",
-             "; ",
-           ] # Respects document structure
-     ```
-   - These settings preserve code blocks and their context
-   - Headers stay with their content
-   - Natural breaks at paragraph and section boundaries
-
-3. **Search Thresholds**:
-
-   ```yaml
-   search:
-     thresholds:
-       default: 0.35 # Base threshold for content matching
-       tag_search: 0.30 # More lenient for tag matches
-       date_search: 0.30 # More lenient for date matches
-       content_search: 0.40 # Stricter for content searches
-   ```
-
-4. **Recommendations**:
-
-   - mxbai-embed-large performs notably better for technical content
-   - Local processing eliminates API costs and latency
-   - Better handling of code snippets and documentation
-   - More consistent chunking of technical content
-
-5. **Vector Store Maintenance**:
-   - Delete store and reindex when changing models:
-     ```bash
-     rm -rf ~/workspace/rd/cf-notes/.vector_store
-     python main.py kb --reindex
-     ```
-   - Monitor similarity scores to detect any drift
-   - Consider monthly reindexing for optimal performance
-
-### Recommended Model Configuration
-
-For optimal results with technical content and code snippets, we recommend using Ollama with mxbai-embed-large:
-
-```yaml
-# config.yaml
+# Embedding configuration (recommended local setup)
 embeddings:
   model_type: "ollama"
-  model_name: "mxbai-embed-large:latest"
-  batch_size: 100
+  model_name: "mxbai-embed-large"
   ollama_config:
     base_url: "http://localhost:11434"
     num_ctx: 512
     num_thread: 4
-
-chunking_config:
-  recursive:
-    chunk_size: 300
-    chunk_overlap: 100
-    separators:
-      ["\n\n", "\n### ", "\n## ", "\n# ", "\n", ". ", "? ", "! ", "; "]
-
-search:
-  thresholds:
-    default: 0.35
-    tag_search: 0.30
-    date_search: 0.30
-    content_search: 0.40
 ```
 
-To use this configuration:
-
-1. Install Ollama:
-
-   ```bash
-   # macOS/Linux
-   curl https://ollama.ai/install.sh | sh
-   ```
-
-2. Start Ollama service:
-
-   ```bash
-   ollama serve
-   ```
-
-3. Pull the model:
-
-   ```bash
-   ollama pull mxbai-embed-large
-   ```
-
-4. Update your config.yaml with the above settings
-
-5. Reindex your knowledge base:
-   ```bash
-   rm -rf ~/workspace/rd/cf-notes/.vector_store
-   python main.py kb --reindex
-   ```
-
-## Configuration
-
-Copy `config.template.yml` to `config.yml` and setup the correct values.
-Here is a brief explanation of each configuration item:
-
-- `notes_base_dir`: Base directory containing all your notes. For example, `"~/Documents/notes"`.
-
-- `knowledge_base`: Settings for scanning and processing notes:
-
-  ```yaml
-  exclude_patterns:
-    - "*.excalidraw.md" # Exclude Excalidraw files
-    - "templates/*" # Exclude template directory
-    - ".obsidian/*" # Exclude Obsidian config
-    - ".trash/*" # Exclude trash
-    - ".git/*" # Exclude git directory
-  ```
-
-- `vector_store`: Configuration for the semantic knowledge base:
-
-  - `path`: Location to store the vector database. For example, `"~/Documents/notes/.vector_store"`.
-  - `chunk_size_min`: Minimum size of text chunks for semantic analysis (default: 50).
-  - `chunk_size_max`: Maximum size of text chunks for semantic analysis (default: 500).
-  - `similarity_threshold`: Minimum similarity score for matching content. This value depends on your embedding model:
-    - For normalized embeddings (OpenAI, HuggingFace): Use 0.60-0.85 (higher = stricter matching)
-    - For distance-based embeddings (some Ollama models): Use negative values like -250.0 (less negative = stricter matching)
-  - `hnsw_config`: HNSW index settings for ChromaDB:
-    - `ef_construction`: Controls index build quality (default: 400)
-    - `ef_search`: Controls search quality (default: 200)
-    - `m`: Number of connections per element (default: 128)
-
-- `embeddings`: Configuration for text embedding models:
-  - `model_type`: Type of embedding model to use. Options:
-    - `"openai"`: OpenAI's embedding models (requires API key)
-    - `"huggingface"`: Local HuggingFace models
-    - `"huggingface_instruct"`: HuggingFace instruction-tuned models
-    - `"cohere"`: Cohere's embedding models (requires API key)
-    - `"ollama"`: Local Ollama models
-  - `model_name`: Name of the specific model to use (examples below)
-  - `batch_size`: Number of texts to embed at once (default: 100)
-  - `model_kwargs`: Optional model-specific settings:
-    - `device`: For HuggingFace models: "cpu" or "cuda"
-    - `normalize_embeddings`: Whether to normalize embeddings (default: true)
-  - `ollama_config`: Settings for Ollama models:
-    - `base_url`: Ollama API URL (default: "http://localhost:11434")
-    - `num_ctx`: Context window size (default: 512)
-    - `num_thread`: Number of threads to use (default: 4)
-
-Example configurations for different embedding models:
+### Vector Store Settings
 
 ```yaml
-# OpenAI (default, normalized embeddings)
-embeddings:
-  model_type: "openai"
-  model_name: "text-embedding-3-small"
-  batch_size: 100
 vector_store:
-  similarity_threshold: 0.60  # Higher = stricter matching
+  path: "~/Documents/notes/.vector_store"
+  similarity_threshold: 0.60  # For normalized embeddings
+  hnsw_config:
+    ef_construction: 400
+    ef_search: 200
+    m: 128
+```
+
+### Search Thresholds
+
+```yaml
 search:
   thresholds:
     default: 0.60
     tag_search: 0.50
     date_search: 0.50
-
-# Ollama with mxbai-embed-large (distance-based)
-embeddings:
-  model_type: "ollama"
-  model_name: "mxbai-embed-large:latest"
-  batch_size: 100
-  ollama_config:
-    base_url: "http://localhost:11434"
-    num_ctx: 512
-    num_thread: 4
-vector_store:
-  similarity_threshold: 0.5  # Less negative = stricter matching
-search:
-  thresholds:
-    default: 0.5
-    tag_search: 0.4  # More lenient for tag searches
-    date_search: 0.3  # More lenient for date searches
-
-# Local HuggingFace model (normalized)
-embeddings:
-  model_type: "huggingface"
-  model_name: "sentence-transformers/all-mpnet-base-v2"
-  batch_size: 32
-  model_kwargs:
-    device: "cuda"
-    normalize_embeddings: true
-vector_store:
-  similarity_threshold: 0.70  # Adjust based on model performance
 ```
 
-### Important Notes About Similarity Thresholds
+## Usage Guide
 
-Different embedding models use different similarity metrics:
+### Setting Up Your Notes Repository
 
-1. **Normalized Embeddings** (OpenAI, most HuggingFace models):
+1. Create basic structure:
+   ```bash
+   mkdir -p ~/Documents/notes/{daily,weekly,meetingnotes,learnings}
+   ```
 
-   - Use cosine similarity scores between 0 and 1
-   - Higher thresholds (e.g., 0.85) mean stricter matching
-   - Lower thresholds (e.g., 0.50) mean more lenient matching
-   - Common range: 0.60-0.85
+2. Configure `.gitignore`:
+   ```
+   .vector_store/
+   .obsidian/
+   .trash/
+   *.excalidraw.md
+   .DS_Store
+   ```
 
-2. **Distance-Based Embeddings** (some Ollama models like mxbai-embed-large):
-   - Use negative distance scores (more negative = more different)
-   - Less negative thresholds (e.g., -200.0) mean stricter matching
-   - More negative thresholds (e.g., -300.0) mean more lenient matching
-   - Common range: -200.0 to -300.0
+### Daily Workflow
 
-When switching embedding models:
+1. Write notes throughout the day
+2. Process daily notes:
+   ```bash
+   python main.py notes
+   ```
+3. Update knowledge base:
+   ```bash
+   python main.py kb --update
+   ```
 
-1. Check if your model uses normalized or distance-based similarity
-2. Adjust thresholds accordingly in both `vector_store` and `search` settings
-3. Delete the existing vector store and reindex:
+### Weekly Workflow
+
+1. Generate weekly summary:
+   ```bash
+   python main.py notes --weekly
+   ```
+
+2. Review and process learnings:
+   ```bash
+   python main.py notes --process-learnings
+   ```
+
+## Technical Details
+
+### Embedding Model Comparison
+
+Two primary options are available:
+
+1. **OpenAI (text-embedding-3-small)**
+   - Normalized embeddings (0-1 range)
+   - Typical scores: 0.35-0.45
+   - Requires API key and internet connection
+
+2. **Ollama (mxbai-embed-large)**
+   - Local processing
+   - Better handling of technical content
+   - Typical scores: 0.60-0.65
+   - Recommended for code snippets and documentation
+
+### Maintenance
+
+1. Monthly vector store optimization:
    ```bash
    rm -rf ~/Documents/notes/.vector_store
    python main.py kb --reindex
    ```
+
+2. Monitor similarity scores:
+   - OpenAI: Use thresholds 0.60-0.85
+   - Ollama: Use thresholds 0.50-0.70
+
+### Troubleshooting
+
+1. Enable debug logging:
+   ```yaml
+   # In config.yaml
+   logging:
+     level: "DEBUG"
+   ```
+
+2. Common fixes:
+   ```bash
+   # Clear vector store
+   rm -rf ~/Documents/notes/.vector_store
+   
+   # Rebuild index
+   python main.py kb --reindex
+   
+   # Check Ollama service
+   curl http://localhost:11434/api/embeddings
+   ```
+
+## Acknowledgments
+
+This tool was created using:
+- CodeLLama
+- GPT-4o
+- Claude 3.5 Sonnet
+- Gemini 2 Flash
+- Anthropic MCP
+- Cursor
+- aider.chat

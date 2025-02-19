@@ -76,6 +76,9 @@ def process_knowledge_base(cfg, cli_args):
         if cli_args.reindex or cli_args.update:
             if cli_args.reindex:
                 logger.info("Reindexing all notes...")
+                if not cli_args.dry_run:
+                    logger.info("Clearing existing vector store data...")
+                    vector_store.clear_all_collections()
                 notes = summary_service.get_all_notes()
             else:
                 last_update = vector_store.get_last_update_time()
@@ -116,7 +119,7 @@ def process_knowledge_base(cfg, cli_args):
                         metadata=note,
                     )
 
-                if cli_args.update:
+                if cli_args.reindex or cli_args.update:
                     vector_store.set_last_update_time(current_time)
                     logger.info(
                         f"Updated last_update timestamp to {datetime.fromtimestamp(current_time)}"
