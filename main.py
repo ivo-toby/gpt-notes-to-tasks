@@ -341,10 +341,14 @@ if __name__ == "__main__":
 
     # Configure logging based on config
     logging.basicConfig(
-        level=getattr(logging, cfg["logging"]["level"]),
-        format=cfg["logging"]["format"]
+        level=getattr(logging, cfg.get("logging", {}).get("level", "INFO").upper()),
+        format=cfg.get("logging", {}).get("format", "%(levelname)s:%(name)s:%(message)s"),
+        force=True  # Override any existing configuration
     )
-    logger = logging.getLogger(__name__)
+    
+    # Set logging level for specific modules
+    logging.getLogger("services.vector_store.embedding_service").setLevel(logging.DEBUG)
+    logging.getLogger("services.vector_store.store_service").setLevel(logging.DEBUG)
 
     if args.command == "notes":
         if args.process_learnings:

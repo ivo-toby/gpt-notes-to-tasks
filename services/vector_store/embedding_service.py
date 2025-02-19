@@ -82,12 +82,17 @@ class EmbeddingService:
             List of embedding values
         """
         try:
+            logger.debug("Generating embedding for query text")
             embeddings = self.model.embed_query(text)
-            # Normalize OpenAI embeddings
+            # Normalize embeddings
             if self.model_type == "openai":
                 import numpy as np
                 embeddings = np.array(embeddings)
-                embeddings = embeddings / np.linalg.norm(embeddings)
+                original_norm = np.linalg.norm(embeddings)
+                logger.debug(f"Original embedding norm before normalization: {original_norm}")
+                embeddings = embeddings / original_norm
+                normalized_norm = np.linalg.norm(embeddings)
+                logger.debug(f"Embedding norm after normalization: {normalized_norm}")
                 embeddings = embeddings.tolist()
             return embeddings
         except Exception as e:

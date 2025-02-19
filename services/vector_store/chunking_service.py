@@ -20,12 +20,16 @@ class ChunkingService:
         """
         self.config = config
         chunk_config = config.get("chunking_config", {}).get("recursive", {})
-        self.chunk_size = chunk_config.get("chunk_size", 500)
-        self.chunk_overlap = chunk_config.get("chunk_overlap", 50)
+        self.chunk_size = chunk_config.get("chunk_size", 300)
+        self.chunk_overlap = chunk_config.get("chunk_overlap", 100)
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,
             length_function=len,
+            separators=chunk_config.get(
+                "separators",
+                ["\n\n", "\n### ", "\n## ", "\n# ", "\n", ". ", "? ", "! ", "; "]
+            ),
             is_separator_regex=False,
         )
 

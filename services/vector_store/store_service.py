@@ -58,6 +58,7 @@ class VectorStoreService:
 
         # Configure collection settings with HNSW parameters
         collection_params = {
+            "hnsw:space": "cosine",  # Use cosine distance
             "hnsw:construction_ef": hnsw_config.get("ef_construction", 400),
             "hnsw:search_ef": hnsw_config.get("ef_search", 200),
             "hnsw:M": hnsw_config.get("m", 128),
@@ -276,7 +277,7 @@ class VectorStoreService:
         Args:
             query_embedding: The embedding vector to compare against
             limit: Maximum number of results to return
-            threshold: Optional similarity threshold (0-1)
+            threshold: Optional similarity threshold (-1 to 1, where 1 is most similar)
             doc_type: Optional filter for specific document types
 
         Returns:
@@ -291,11 +292,23 @@ class VectorStoreService:
                 + (f", doc_type={doc_type}" if doc_type else "")
             )
 
+            # Add debug info about query embedding
+            import numpy as np
+            query_norm = np.linalg.norm(query_embedding)
+            logger.debug(f"Query embedding norm: {query_norm}")
+
+            # Debug query information
+            import numpy as np
+            query_norm = np.linalg.norm(query_embedding)
+            logger.debug(f"Query vector norm: {query_norm}")
+
+            # Execute query
+            logger.debug(f"Executing query with limit={limit} and doc_type={doc_type}")
             results = self.collections["notes"].query(
                 query_embeddings=[query_embedding],
                 n_results=limit,
                 where=where,
-                include=["documents", "metadatas", "distances"],
+                include=["documents", "metadatas", "distances", "embeddings"],
             )
 
             if not results["ids"][0]:
@@ -303,12 +316,26 @@ class VectorStoreService:
                 return []
 
             logger.info(f"Found {len(results['ids'][0])} matching documents")
+            logger.debug("Processing results...")
 
             # Format results
             similar_docs = []
             for i in range(len(results["ids"][0])):
-                # For OpenAI embeddings, the distance is already a similarity score
-                similarity = results["distances"][0][i]
+                # Get embedding and analyze
+                doc_embedding = np.array(results["embeddings"][0][i])
+                doc_norm = np.linalg.norm(doc_embedding)
+                dot_product = np.dot(query_embedding, doc_embedding)
+                raw_distance = results["distances"][0][i]
+                similarity = 1 - raw_distance
+
+                logger.debug(f"Document {i}:")
+                logger.debug(f"  - Norm: {doc_norm}")
+                logger.debug(f"  - Dot product with query: {dot_product}")
+                logger.debug(f"  - Raw distance: {raw_distance}")
+                logger.debug(f"  - Calculated similarity: {similarity}")
+                logger.debug(f"  - Preview: {results['documents'][0][i][:100]}")
+                logger.debug(f"Raw distance: {raw_distance}, Converted similarity: {similarity}")
+                logger.debug(f"Document content preview: {results['documents'][0][i][:100]}...")
                 if threshold and similarity < threshold:
                     logger.info(
                         f"Skipping result with similarity {similarity:.3f} below threshold {threshold}"
