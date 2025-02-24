@@ -220,7 +220,8 @@ class LinkService:
             for link in links:
                 if link.get("add_wiki_link"):
                     target = link["target_id"]
-                    alias = self._generate_alias(target)  # Always generate an alias
+                    # Use provided alias if available, otherwise generate one
+                    alias = link.get("alias") or self._generate_alias(target)
                     new_link = f"[[{target}|{alias}]]"
 
                     # Check if link already exists in either section
@@ -271,8 +272,14 @@ class LinkService:
 
     def _generate_alias(self, target: str) -> str:
         """Generate a readable alias from the target ID."""
-        # Just use the filename without extension
-        return os.path.basename(target).replace(".md", "")
+        # Remove file extension if present
+        base_name = os.path.basename(target).replace(".md", "")
+
+        # Replace hyphens and underscores with spaces
+        words = base_name.replace("-", " ").replace("_", " ").split()
+
+        # Capitalize each word
+        return " ".join(word.capitalize() for word in words)
 
     def _has_wiki_link(self, content: str, target: str) -> bool:
         """
