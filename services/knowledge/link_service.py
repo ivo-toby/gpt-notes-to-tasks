@@ -177,7 +177,7 @@ class LinkService:
         return suggestions
 
     def update_obsidian_links(
-        self, note_path: str, links: List[Dict[str, Any]], update_backlinks: bool = True
+        self, note_path: str, links: List[Dict[str, Any]], update_backlinks: bool = True, skip_vector_update: bool = False
     ) -> None:
         """
         Update Obsidian-style wiki links in a note file.
@@ -186,6 +186,7 @@ class LinkService:
             note_path: Full path to the note file
             links: List of links to add/update
             update_backlinks: Whether to update backlinks in target notes
+            skip_vector_update: Whether to skip updating the vector store (useful for batch operations)
 
         Raises:
             FileNotFoundError: If the note file does not exist
@@ -237,12 +238,15 @@ class LinkService:
                 # If we have existing links section, preserve it and add new links
                 if links_section:
                     updated_content += "\n---\n" + links_section.rstrip()
+                    # Add header and new links if they don't exist
+                    if "## Auto generated references" not in updated_content:
+                        updated_content += "\n\n## Auto generated references"
                     # Add new links at the end of existing links section
                     for link in new_links:
                         updated_content += f"\n{link}"
                 else:
-                    # No existing links section, create new one
-                    updated_content += "\n\n---\n"
+                    # No existing links section, create new one with header
+                    updated_content += "\n\n---\n## Auto generated references"
                     for link in new_links:
                         updated_content += f"\n{link}"
 
@@ -252,18 +256,9 @@ class LinkService:
                     f.write(updated_content)
                 logger.info(f"Updated links in file: {note_path}")
 
-                # Update the vector store
-                chunks = self.vector_store.chunking_service.chunk_document(
-                    updated_content, doc_type="note"
-                )
-                chunk_texts = [chunk["content"] for chunk in chunks]
-                embeddings = self.vector_store.embedding_service.embed_chunks(
-                    chunk_texts
-                )
-                self.vector_store.update_document(
-                    doc_id=note_id, new_chunks=chunk_texts, new_embeddings=embeddings
-                )
-                logger.info(f"Updated vector store for: {note_id}")
+                # Update the vector store if not skipped
+                if not skip_vector_update:
+                    self._update_vector_store(note_id, updated_content)
             else:
                 logger.info(f"No new links to add for: {note_path}")
 
@@ -367,3 +362,26 @@ class LinkService:
                     f.write(content)
             except IOError as e:
                 logger.error(f"Error writing file {source_path}: {str(e)}")
+
+    def _update_vector_store(self, note_id: str, content: str) -> None:
+        """
+        Update the vector store for a note.
+
+        Args:
+            note_id: ID of the note to update
+            content: New content of the note
+        """
+        try:
+            chunks = self.vector_store.chunking_service.chunk_document(
+                content, doc_type="note"
+            )
+            chunk_texts = [chunk["content"] for chunk in chunks]
+            embeddings = self.vector_store.embedding_service.embed_chunks(
+                chunk_texts
+            )
+            self.vector_store.update_document(
+                doc_id=note_id, new_chunks=chunk_texts, new_embeddings=embeddings
+            )
+            logger.info(f"Updated vector store for: {note_id}")
+        except Exception as e:
+            logger.error(f"Failed to update vector store for {note_id}: {str(e)}")

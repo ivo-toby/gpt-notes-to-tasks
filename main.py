@@ -193,6 +193,8 @@ def process_knowledge_base(cfg, cli_args):
                 logger.info(f"Found {len(notes)} notes to analyze")
             else:
                 notes = summary_service.get_all_notes()
+
+            # Process notes and add links
             for note in notes:
                 logger.info(f"Analyzing links for: {note['path']}")
                 analysis = link_service.analyze_relationships(note["path"])
@@ -208,8 +210,15 @@ def process_knowledge_base(cfg, cli_args):
                         }
                         for suggestion in analysis["suggested_links"]
                     ]
-                    link_service.update_obsidian_links(note["path"], links_to_add)
+                    # Add links without updating vector store since we're only adding references
+                    link_service.update_obsidian_links(note["path"], links_to_add, update_backlinks=True, skip_vector_update=True)
                     logger.info(f"Links updated successfully for: {note['path']}")
+
+            # Update the last update time to mark these notes as processed
+            if not cli_args.dry_run:
+                current_time = time.time()
+                vector_store.set_last_update_time(current_time)
+                logger.info(f"Updated last_update timestamp to {datetime.fromtimestamp(current_time)}")
 
         elif cli_args.analyze_links:
             note_path = os.path.expanduser(cli_args.analyze_links)
@@ -348,7 +357,7 @@ if __name__ == "__main__":
         format=cfg.get("logging", {}).get("format", "%(levelname)s:%(name)s:%(message)s"),
         force=True  # Override any existing configuration
     )
-    
+
     # Set logging level for specific modules
     logging.getLogger("services.vector_store.embedding_service").setLevel(logging.DEBUG)
     logging.getLogger("services.vector_store.store_service").setLevel(logging.DEBUG)
